@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Growimpian — Bimbingan Karir Kuliah & Dunia Kerja</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --blue-bright: #0ea5e9;
@@ -196,18 +195,9 @@
     </div>
 
     <div class="nav-links" id="nav-guest">
-      <span class="nav-link-item" onclick="showLanding()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        Beranda
-      </span>
-      <button class="btn-pill btn-siswa-nav" onclick="openAuthModal('siswa')">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-        Login Siswa
-      </button>
-      <button class="btn-pill btn-guru-nav" onclick="openAuthModal('guru_bk')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        Masuk Guru BK
-      </button>
+      <span class="nav-link-item" onclick="showLanding()">Beranda</span>
+      <button class="btn-pill btn-siswa-nav" onclick="openAuthModal('siswa')">Login Siswa</button>
+      <button class="btn-pill btn-guru-nav" onclick="openAuthModal('guru_bk')">Masuk Guru BK</button>
       <button class="btn-pill btn-admin-nav" onclick="openAuthModal('admin')">Admin</button>
     </div>
 
@@ -228,14 +218,8 @@
         Growimpian hadir membantumu mengenali potensi diri, mengeksplorasi studi & pekerjaan, serta berkonsultasi langsung dengan Guru BK!
       </p>
       <div class="hero-actions">
-        <button class="btn-hero-primary" onclick="openAuthModal('siswa')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-          Login Siswa Sekarang
-        </button>
-        <button class="btn-hero-secondary" onclick="openAuthModal('guru_bk')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-          Masuk Guru BK
-        </button>
+        <button class="btn-hero-primary" onclick="openAuthModal('siswa')">Login Siswa Sekarang</button>
+        <button class="btn-hero-secondary" onclick="openAuthModal('guru_bk')">Masuk Guru BK</button>
       </div>
     </section>
 
@@ -336,9 +320,9 @@
     <div class="grid-2">
       <div class="dash-card">
         <h3>Kelola Kode Khusus Guru BK</h3>
-        <p style="font-size:0.88rem; color:var(--muted); margin-bottom:1rem;">Kode unik untuk validasi pendaftaran & login Guru BK.</p>
+        <p style="font-size:0.88rem; color:var(--muted); margin-bottom:1rem;">Kode default: <strong>GURUKU</strong>. Tambah kode lain jika perlu.</p>
         <form id="form-kode" style="display:flex; gap:8px; margin-bottom:1rem;">
-          <input type="text" id="new-kode" required placeholder="Contoh: GURUKU" />
+          <input type="text" id="new-kode" required placeholder="Contoh: GURUBK2026" />
           <button type="submit" class="btn-pill btn-guru-nav">+ Tambah</button>
         </form>
         <div class="table-wrap">
@@ -407,35 +391,70 @@
     </div>
   </div>
 
-  <script>
-    // GANTI DENGAN CREDENTIAL SUPABASE KAMU
-    const SUPABASE_URL = 'https://PROJECT_ID_KAMU.supabase.co';
-    const SUPABASE_ANON_KEY = 'ANON_KEY_KAMU_DI_SINI';
-    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <!-- FIREBASE SDK & LOGIC -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      getDoc,
+      addDoc,
+      updateDoc,
+      collection,
+      query,
+      where,
+      getDocs,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // KONFIGURASI FIREBASE GROWIMPIAN
+    const firebaseConfig = {
+      apiKey: "AIzaSyC9TIlLechVNq7BRM0b0TprKnBeKlkhq5k",
+      authDomain: "growimpian.firebaseapp.com",
+      projectId: "growimpian",
+      storageBucket: "growimpian.firebasestorage.app",
+      messagingSenderId: "139711807881",
+      appId: "1:139711807881:web:4889f0cbd23a2108a2e158",
+      measurementId: "G-VYWZYSHBSJ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     let currentRole = 'siswa';
     let isRegisterMode = false;
     let currentUserProfile = null;
 
-    function openAuthModal(role = 'siswa') {
+    window.openAuthModal = (role = 'siswa') => {
       isRegisterMode = false;
       updateAuthModeUI();
-      setRole(role);
+      window.setRole(role);
       document.getElementById('auth-modal').classList.remove('hidden');
-    }
+    };
 
-    function closeAuthModal() {
+    window.closeAuthModal = () => {
       document.getElementById('auth-modal').classList.add('hidden');
       hideAlert();
-    }
+    };
 
-    function showLanding() {
+    window.showLanding = () => {
       if (currentUserProfile) return;
       document.getElementById('landing-view').classList.remove('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    };
 
-    function setRole(role) {
+    window.setRole = (role) => {
       currentRole = role;
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       const activeTab = document.getElementById(`tab-${role}`);
@@ -457,12 +476,12 @@
         inputKode.value = '';
       }
       document.getElementById('group-kelas').classList.toggle('hidden', !(isRegisterMode && role === 'siswa'));
-    }
+    };
 
-    function toggleAuthMode() {
+    window.toggleAuthMode = () => {
       isRegisterMode = !isRegisterMode;
       updateAuthModeUI();
-    }
+    };
 
     function updateAuthModeUI() {
       hideAlert();
@@ -476,7 +495,7 @@
       const tabAdmin = document.getElementById('tab-admin');
       if (isRegisterMode) {
         tabAdmin.classList.add('hidden');
-        if (currentRole === 'admin') setRole('siswa');
+        if (currentRole === 'admin') window.setRole('siswa');
       } else {
         tabAdmin.classList.remove('hidden');
       }
@@ -491,6 +510,17 @@
     }
 
     function hideAlert() { document.getElementById('auth-alert').classList.add('hidden'); }
+
+    async function cekKodeBK(inputKode) {
+      if (inputKode.toUpperCase() === 'GURUKU') return true;
+      const q = query(
+        collection(db, 'kode_akses_bk'),
+        where('kode_khusus', '==', inputKode.toUpperCase()),
+        where('is_active', '==', true)
+      );
+      const snap = await getDocs(q);
+      return !snap.empty;
+    }
 
     document.getElementById('auth-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -508,47 +538,45 @@
 
       try {
         if (currentRole === 'guru_bk') {
-          if (kodeKhusus.toUpperCase() !== 'GURUKU') {
-            const { data: kodeValid, error: rpcErr } = await db.rpc('cek_kode_bk', { input_kode: kodeKhusus });
-            if (rpcErr || !kodeValid) throw new Error('Kode khusus Guru BK tidak valid atau nonaktif.');
-          }
+          const valid = await cekKodeBK(kodeKhusus);
+          if (!valid) throw new Error('Kode khusus Guru BK tidak valid atau nonaktif.');
         }
 
         if (isRegisterMode) {
-          const { data: signUpData, error: signUpErr } = await db.auth.signUp({ email, password });
-          if (signUpErr) throw signUpErr;
-
-          if (signUpData.user) {
-            const { error: profErr } = await db.from('profiles').insert({
-              id: signUpData.user.id, nama, email,
-              kelas: currentRole === 'siswa' ? kelas : null, role: currentRole
-            });
-            if (profErr) throw profErr;
-          }
-          showAlert('Pendaftaran berhasil! Silakan masuk.', 'success');
-          toggleAuthMode();
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
+          await setDoc(doc(db, 'users', cred.user.uid), {
+            nama,
+            email,
+            kelas: currentRole === 'siswa' ? kelas : null,
+            role: currentRole,
+            createdAt: serverTimestamp()
+          });
+          showAlert('Pendaftaran berhasil! Anda langsung masuk.', 'success');
+          window.closeAuthModal();
         } else {
-          const { data: authData, error: authErr } = await db.auth.signInWithPassword({ email, password });
-          if (authErr) throw new Error('Email atau password salah.');
-
-          const { data: profile, error: profErr } = await db.from('profiles').select('*').eq('id', authData.user.id).single();
-          if (profErr || profile.role !== currentRole) {
-            await db.auth.signOut();
+          const cred = await signInWithEmailAndPassword(auth, email, password);
+          const snap = await getDoc(doc(db, 'users', cred.user.uid));
+          if (!snap.exists() || snap.data().role !== currentRole) {
+            await signOut(auth);
             throw new Error(`Akun ini tidak terdaftar sebagai ${currentRole.replace('_', ' ')}.`);
           }
-          closeAuthModal();
-          loadDashboard(profile);
+          window.closeAuthModal();
+          loadDashboard({ id: cred.user.uid, ...snap.data() });
         }
       } catch (err) {
-        showAlert(err.message || 'Terjadi kesalahan.');
+        let msg = err.message;
+        if (err.code === 'auth/email-already-in-use') msg = 'Email sudah terdaftar.';
+        if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') msg = 'Email atau password salah.';
+        if (err.code === 'auth/weak-password') msg = 'Password minimal 6 karakter.';
+        showAlert(msg);
       } finally {
         btn.disabled = false;
         btn.textContent = isRegisterMode ? 'Daftar Sekarang' : 'Masuk';
       }
     });
 
-    async function handleLogout() {
-      await db.auth.signOut();
+    window.handleLogout = async () => {
+      await signOut(auth);
       currentUserProfile = null;
       document.getElementById('nav-user').classList.add('hidden');
       document.getElementById('nav-guest').classList.remove('hidden');
@@ -556,7 +584,7 @@
       document.getElementById('dashboard-guru').classList.add('hidden');
       document.getElementById('dashboard-admin').classList.add('hidden');
       document.getElementById('landing-view').classList.remove('hidden');
-    }
+    };
 
     function loadDashboard(profile) {
       currentUserProfile = profile;
@@ -581,34 +609,45 @@
     // FITUR SISWA
     document.getElementById('form-konseling').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const { error } = await db.from('jadwal_konseling').insert({
-        siswa_id: currentUserProfile.id,
-        tanggal_konseling: document.getElementById('k-tanggal').value,
-        jam_konseling: document.getElementById('k-jam').value,
-        topik: document.getElementById('k-topik').value.trim()
-      });
-      if (error) return alert('Gagal mengirim pengajuan: ' + error.message);
-      e.target.reset();
-      fetchJadwalSiswa();
+      try {
+        await addDoc(collection(db, 'jadwal_konseling'), {
+          siswa_id: currentUserProfile.id,
+          siswa_nama: currentUserProfile.nama,
+          siswa_kelas: currentUserProfile.kelas || '-',
+          tanggal_konseling: document.getElementById('k-tanggal').value,
+          jam_konseling: document.getElementById('k-jam').value,
+          topik: document.getElementById('k-topik').value.trim(),
+          status: 'menunggu',
+          catatan_guru: '',
+          createdAt: serverTimestamp()
+        });
+        e.target.reset();
+        fetchJadwalSiswa();
+      } catch (err) {
+        alert('Gagal mengirim pengajuan: ' + err.message);
+      }
     });
 
     async function fetchJadwalSiswa() {
-      const { data } = await db.from('jadwal_konseling').select('*').eq('siswa_id', currentUserProfile.id).order('created_at', { ascending: false });
+      const q = query(collection(db, 'jadwal_konseling'), where('siswa_id', '==', currentUserProfile.id));
+      const snap = await getDocs(q);
+      const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const tbody = document.getElementById('siswa-table-body');
-      tbody.innerHTML = (!data || !data.length)
+      tbody.innerHTML = !rows.length
         ? '<tr><td colspan="4" style="text-align:center;color:var(--muted);">Belum ada pengajuan konseling.</td></tr>'
-        : data.map(r => `<tr><td>${r.tanggal_konseling}<br><small>${r.jam_konseling}</small></td><td>${r.topik}</td><td><span class="status status-${r.status}">${r.status}</span></td><td>${r.catatan_guru || '-'}</td></tr>`).join('');
+        : rows.map(r => `<tr><td>${r.tanggal_konseling}<br><small>${r.jam_konseling}</small></td><td>${r.topik}</td><td><span class="status status-${r.status}">${r.status}</span></td><td>${r.catatan_guru || '-'}</td></tr>`).join('');
     }
 
     // FITUR GURU BK
     async function fetchJadwalGuru() {
-      const { data } = await db.from('jadwal_konseling').select('*, profiles!jadwal_konseling_siswa_id_fkey(nama, kelas)').order('created_at', { ascending: false });
+      const snap = await getDocs(collection(db, 'jadwal_konseling'));
+      const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const tbody = document.getElementById('guru-table-body');
-      tbody.innerHTML = (!data || !data.length)
+      tbody.innerHTML = !rows.length
         ? '<tr><td colspan="5" style="text-align:center;color:var(--muted);">Belum ada pengajuan masuk.</td></tr>'
-        : data.map(r => `
+        : rows.map(r => `
           <tr>
-            <td><strong>${r.profiles?.nama || 'Siswa'}</strong><br><small>${r.profiles?.kelas || '-'}</small></td>
+            <td><strong>${r.siswa_nama || 'Siswa'}</strong><br><small>${r.siswa_kelas || '-'}</small></td>
             <td>${r.tanggal_konseling}<br><small>${r.jam_konseling}</small></td>
             <td>${r.topik}</td>
             <td><span class="status status-${r.status}">${r.status}</span></td>
@@ -623,50 +662,49 @@
           </tr>`).join('');
     }
 
-    async function updateKonseling(id, status) {
+    window.updateKonseling = async (id, status) => {
       const catatan = document.getElementById(`note-${id}`).value.trim();
-      const { error } = await db.from('jadwal_konseling').update({ status, catatan_guru: catatan, guru_bk_id: currentUserProfile.id }).eq('id', id);
-      if (error) return alert('Gagal update: ' + error.message);
+      await updateDoc(doc(db, 'jadwal_konseling', id), { status, catatan_guru: catatan });
       fetchJadwalGuru();
-    }
+    };
 
     // FITUR ADMIN
     document.getElementById('form-kode').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const kode = document.getElementById('new-kode').value.trim();
-      const { error } = await db.from('kode_akses_bk').insert({ kode_khusus: kode });
-      if (error) return alert('Gagal tambah kode: ' + error.message);
+      const kode = document.getElementById('new-kode').value.trim().toUpperCase();
+      await addDoc(collection(db, 'kode_akses_bk'), { kode_khusus: kode, is_active: true });
       e.target.reset();
       fetchAdminData();
     });
 
-    async function toggleKode(id, currentStatus) {
-      await db.from('kode_akses_bk').update({ is_active: !currentStatus }).eq('id', id);
+    window.toggleKode = async (id, currentStatus) => {
+      await updateDoc(doc(db, 'kode_akses_bk', id), { is_active: !currentStatus });
       fetchAdminData();
-    }
+    };
 
     async function fetchAdminData() {
-      const { data: kodes } = await db.from('kode_akses_bk').select('*').order('id', { ascending: false });
-      document.getElementById('admin-kode-body').innerHTML = (kodes || []).map(k => `
+      const kodeSnap = await getDocs(collection(db, 'kode_akses_bk'));
+      const kodes = kodeSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('admin-kode-body').innerHTML = kodes.map(k => `
         <tr>
           <td><strong>${k.kode_khusus}</strong></td>
           <td><span class="status ${k.is_active ? 'status-selesai' : 'status-ditolak'}">${k.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
-          <td><button class="btn-sm" style="background:#e2e8f0;" onclick="toggleKode(${k.id}, ${k.is_active})">${k.is_active ? 'Nonaktifkan' : 'Aktifkan'}</button></td>
+          <td><button class="btn-sm" style="background:#e2e8f0;" onclick="toggleKode('${k.id}', ${k.is_active})">${k.is_active ? 'Nonaktifkan' : 'Aktifkan'}</button></td>
         </tr>`).join('');
 
-      const { data: users } = await db.from('profiles').select('nama, email, role').order('created_at', { ascending: false });
-      document.getElementById('admin-user-body').innerHTML = (users || []).map(u => `
+      const userSnap = await getDocs(collection(db, 'users'));
+      const users = userSnap.docs.map(d => d.data());
+      document.getElementById('admin-user-body').innerHTML = users.map(u => `
         <tr><td>${u.nama}</td><td>${u.email}</td><td><span class="badge-role">${u.role.replace('_', ' ')}</span></td></tr>`).join('');
     }
 
     // Auto-login saat refresh
-    (async () => {
-      const { data: { session } } = await db.auth.getSession();
-      if (session) {
-        const { data: profile } = await db.from('profiles').select('*').eq('id', session.user.id).single();
-        if (profile) loadDashboard(profile);
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) loadDashboard({ id: user.uid, ...snap.data() });
       }
-    })();
+    });
   </script>
 </body>
 </html>
