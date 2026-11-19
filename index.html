@@ -983,7 +983,7 @@
                                         </span>
                                         <span class="text-[11px] font-medium text-indigo-600">Verifikasi Resmi</span>
                                     </label>
-                                    <input type="text" id="auth-guru-code" required placeholder="Masukkan kode unik"
+                                    <input type="text" id="auth-guru-code" required placeholder="Masukkan kode unik Guru BK"
                                         class="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200 bg-white text-sm font-mono font-semibold tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition">
                                     <p class="text-[11px] text-indigo-700/80 mt-1.5">
                                         Hanya Guru BK dengan kode akses resmi sekolah yang dapat masuk atau mendaftar.
@@ -1016,34 +1016,6 @@
                                 Akses khusus Administrator Sekolah Grow Impian.
                             </div>
                         `}
-
-                        <!-- MODE DEMO CEPAT -->
-                        <div class="mt-6 pt-6 border-t border-slate-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                    <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
-                                    Mode Demo Cepat
-                                </span>
-                                <span class="text-[11px] text-slate-400">Klik untuk isi otomatis</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" data-action="demo-fill" data-demo="siswa"
-                                    class="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition flex flex-col items-center gap-1">
-                                    <i data-lucide="graduation-cap" class="w-4 h-4"></i>
-                                    <span>Siswa</span>
-                                </button>
-                                <button type="button" data-action="demo-fill" data-demo="guru_bk"
-                                    class="p-2.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold transition flex flex-col items-center gap-1">
-                                    <i data-lucide="user-check" class="w-4 h-4"></i>
-                                    <span>Guru BK</span>
-                                </button>
-                                <button type="button" data-action="demo-fill" data-demo="admin"
-                                    class="p-2.5 rounded-xl border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition flex flex-col items-center gap-1">
-                                    <i data-lucide="shield" class="w-4 h-4"></i>
-                                    <span>Admin</span>
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1170,7 +1142,7 @@
                         <div class="flex items-center gap-3 shrink-0">
                             <span class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
                                 <span class="w-2 h-2 rounded-full ${state.isFirebaseConnected ? 'bg-emerald-500' : 'bg-indigo-500'}"></span>
-                                ${state.isFirebaseConnected ? 'Firebase Sync' : 'Live Demo'}
+                                ${state.isFirebaseConnected ? 'Firebase Sync' : 'Mode Lokal'}
                             </span>
                             ${getRoleBadge(user.role)}
                         </div>
@@ -2204,7 +2176,7 @@
             if (role === 'guru_bk') {
                 const enteredCode = (document.getElementById('auth-guru-code')?.value || '').trim().toUpperCase();
                 if (enteredCode !== state.guruBkCode.toUpperCase()) {
-                    state.authError = `Kode unik Guru BK salah! Anda memasukkan "${enteredCode || '(kosong)'}". Silakan periksa kembali kode resmi dari Admin sekolah (default: GURUKU).`;
+                    state.authError = 'Kode unik Guru BK tidak valid. Silakan periksa kembali kode akses resmi dari Admin sekolah.';
                     render();
                     return;
                 }
@@ -2239,7 +2211,7 @@
             } else {
                 const found = state.users.find(u => u.email.toLowerCase() === email && u.password === password);
                 if (!found) {
-                    state.authError = 'Email atau kata sandi tidak cocok. Anda juga bisa mencoba tombol Mode Demo Cepat di bawah.';
+                    state.authError = 'Email atau kata sandi tidak cocok. Silakan periksa kembali kredensial Anda.';
                     render();
                     return;
                 }
@@ -2335,31 +2307,6 @@
                 state.authMode = state.authMode === 'login' ? 'register' : 'login';
                 state.authError = '';
                 render();
-                return;
-            }
-
-            if (action === 'demo-fill') {
-                const demoRole = btn.dataset.demo;
-                state.authRoleTab = demoRole;
-                state.authMode = 'login';
-                state.authError = '';
-                render();
-
-                const creds = {
-                    siswa: { email: 'siswa@growimpian.id', pass: 'siswa123' },
-                    guru_bk: { email: 'gurubk@growimpian.id', pass: 'guru123', code: state.guruBkCode },
-                    admin: { email: 'admin@growimpian.id', pass: 'admin123' }
-                }[demoRole];
-
-                const emailEl = document.getElementById('auth-email');
-                const passEl = document.getElementById('auth-password');
-                const codeEl = document.getElementById('auth-guru-code');
-
-                if (emailEl) emailEl.value = creds.email;
-                if (passEl) passEl.value = creds.pass;
-                if (codeEl && creds.code) codeEl.value = creds.code;
-
-                showToast(`Kredensial demo ${demoRole === 'guru_bk' ? 'Guru BK (Kode: ' + state.guruBkCode + ')' : demoRole.toUpperCase()} terisi otomatis. Klik tombol Masuk!`, 'info');
                 return;
             }
 
