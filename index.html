@@ -18,21 +18,12 @@
                 extend: {
                     fontFamily: {
                         sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            navy: '#0F172A',
-                            slate: '#1E293B',
-                            emerald: '#10B981',
-                            indigo: '#4F46E5',
-                        }
                     }
                 }
             }
         }
     </script>
     <style>
-        /* Custom Scrollbar & Smooth Transitions */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -56,8 +47,9 @@
         }
         .hero-pattern {
             background-color: #0F172A;
-            background-image: radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.16) 0%, transparent 45%),
-                              radial-gradient(circle at 85% 80%, rgba(79, 70, 229, 0.22) 0%, transparent 45%);
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.16) 0%, transparent 45%),
+                radial-gradient(circle at 85% 80%, rgba(79, 70, 229, 0.22) 0%, transparent 45%);
         }
     </style>
 </head>
@@ -86,7 +78,7 @@
     <!-- ==================== FIREBASE & APPLICATION SCRIPT ==================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import {
             getFirestore,
             collection,
@@ -95,16 +87,13 @@
             addDoc,
             updateDoc,
             deleteDoc,
-            getDocs,
-            getDoc,
             onSnapshot
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =====================================================================
-        // 1. KONFIGURASI FIREBASE & MODE FALLBACK
+        // 1. KONFIGURASI FIREBASE (TUNGGAL & BERSIH)
         // =====================================================================
-        // Konfigurasi Firebase Project "growimpian" untuk deployment Vercel
-        const manualFirebaseConfig = {
+        const firebaseConfig = {
             apiKey: "AIzaSyC9TIlLechVNq7BRM0b0TprKnBeKlkhq5k",
             authDomain: "growimpian.firebaseapp.com",
             projectId: "growimpian",
@@ -114,218 +103,14 @@
             measurementId: "G-VYWZYSHBSJ"
         };
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'grow-impian-app';
-        let firebaseConfig = manualFirebaseConfig;
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            try {
-                firebaseConfig = JSON.parse(__firebase_config);
-            } catch (e) {
-                console.warn('Gagal mem-parsing __firebase_config:', e);
-            }
-        }
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const DEFAULT_GURU_CODE = 'GURUKU';
 
         let db = null;
         let auth = null;
-        let firebaseUser = null;
         let useFirebase = false;
 
         // =====================================================================
-        // 2. DATA AWAL (SEED DATA) PROFESIONAL
-        // =====================================================================
-        const DEFAULT_GURU_CODE = 'GURUKU';
-
-        const SEED_USERS = [
-            {
-                id: 'usr-admin-1',
-                name: 'Administrator Utama',
-                email: 'admin@growimpian.id',
-                password: 'admin123',
-                role: 'admin',
-                kelas: '-',
-                nip: 'ADM-001',
-                riasec: null,
-                createdAt: '2026-01-10T08:00:00.000Z'
-            },
-            {
-                id: 'usr-guru-1',
-                name: 'Ibu Sari Wulandari, S.Pd., M.Psi.',
-                email: 'gurubk@growimpian.id',
-                password: 'guru123',
-                role: 'guru_bk',
-                kelas: '-',
-                nip: '198804122015032001',
-                riasec: null,
-                createdAt: '2026-01-12T08:00:00.000Z'
-            },
-            {
-                id: 'usr-siswa-1',
-                name: 'Andi Pratama',
-                email: 'siswa@growimpian.id',
-                password: 'siswa123',
-                role: 'siswa',
-                kelas: 'XII IPA 1',
-                nip: '-',
-                riasec: {
-                    code: 'I',
-                    label: 'Investigative (Analitis & Ilmiah)',
-                    summary: 'Anda memiliki rasa ingin tahu intelektual yang tinggi, senang memecahkan masalah kompleks, menganalisis data, serta merancang solusi berbasis logika dan sains.',
-                    careers: ['Software Engineer & AI Developer', 'Data Scientist & Analis Data', 'Dokter & Tenaga Medis Klinis'],
-                    majors: ['Teknik Informatika', 'Sains Data', 'Kedokteran', 'Statistika'],
-                    completedAt: '2026-02-15T10:30:00.000Z'
-                },
-                createdAt: '2026-01-15T08:00:00.000Z'
-            },
-            {
-                id: 'usr-siswa-2',
-                name: 'Nadia Putri Rahayu',
-                email: 'nadia.putri@growimpian.id',
-                password: 'siswa123',
-                role: 'siswa',
-                kelas: 'XII IPS 2',
-                nip: '-',
-                riasec: {
-                    code: 'A',
-                    label: 'Artistic (Kreatif & Ekspresif)',
-                    summary: 'Anda unggul dalam berpikir orisinal, estetika visual, komunikasi kreatif, serta senang menciptakan karya yang berdampak secara emosional dan visual.',
-                    careers: ['UI/UX Designer & Creative Director', 'Content Strategist & Brand Designer', 'Arsitek'],
-                    majors: ['Desain Komunikasi Visual (DKV)', 'Desain Produk', 'Ilmu Komunikasi', 'Arsitektur'],
-                    completedAt: '2026-02-18T14:20:00.000Z'
-                },
-                createdAt: '2026-01-16T08:00:00.000Z'
-            },
-            {
-                id: 'usr-siswa-3',
-                name: 'Budi Santoso',
-                email: 'budi.santoso@growimpian.id',
-                password: 'siswa123',
-                role: 'siswa',
-                kelas: 'XI IPA 3',
-                nip: '-',
-                riasec: {
-                    code: 'E',
-                    label: 'Enterprising (Kepemimpinan & Bisnis)',
-                    summary: 'Anda percaya diri dalam memimpin tim, mengambil keputusan strategis, bernegosiasi, dan melihat peluang bisnis atau inovasi organisasi.',
-                    careers: ['Product Manager & Strategis Bisnis', 'Entrepreneur & Konsultan Manajemen', 'Analis Keuangan'],
-                    majors: ['Manajemen Bisnis', 'Ekonomi Pembangunan', 'Sistem Informasi Bisnis', 'Hukum Bisnis'],
-                    completedAt: '2026-02-20T09:15:00.000Z'
-                },
-                createdAt: '2026-01-17T08:00:00.000Z'
-            },
-            {
-                id: 'usr-siswa-4',
-                name: 'Citra Lestari',
-                email: 'citra.lestari@growimpian.id',
-                password: 'siswa123',
-                role: 'siswa',
-                kelas: 'XII IPA 2',
-                nip: '-',
-                riasec: null,
-                createdAt: '2026-01-18T08:00:00.000Z'
-            }
-        ];
-
-        const SEED_CAREERS = [
-            {
-                id: 'car-1',
-                title: 'Software Engineer & AI Developer',
-                category: 'Teknologi',
-                description: 'Merancang, membangun, dan memelihara aplikasi web, mobile, serta sistem kecerdasan buatan yang memecahkan masalah nyata di berbagai industri.',
-                skills: ['Pemrograman (Python/JS)', 'Algoritma & Struktur Data', 'Problem Solving', 'Cloud & DevOps'],
-                majors: ['Teknik Informatika', 'Ilmu Komputer', 'Rekayasa Perangkat Lunak'],
-                outlook: 'Sangat Tinggi — Pertumbuhan pesat di era digital & AI'
-            },
-            {
-                id: 'car-2',
-                title: 'Data Scientist & Analis Data',
-                category: 'Teknologi',
-                description: 'Mengolah data berskala besar menggunakan statistika dan machine learning untuk menghasilkan wawasan strategis bagi pengambilan keputusan perusahaan.',
-                skills: ['Statistika', 'SQL & Python', 'Visualisasi Data', 'Berpikir Kritis'],
-                majors: ['Sains Data', 'Statistika', 'Matematika Terapan'],
-                outlook: 'Sangat Tinggi — Dibutuhkan di sektor finansial, ritel, dan teknologi'
-            },
-            {
-                id: 'car-3',
-                title: 'Product Manager & Strategis Bisnis',
-                category: 'Bisnis',
-                description: 'Menjembatani kebutuhan pengguna, tujuan bisnis, dan tim teknis untuk merancang produk unggulan yang bernilai tinggi di pasar.',
-                skills: ['Kepemimpinan', 'Riset Pasar', 'Komunikasi Strategis', 'Analisis Bisnis'],
-                majors: ['Manajemen', 'Bisnis Digital', 'Teknik Industri', 'Sistem Informasi'],
-                outlook: 'Tinggi — Peran kunci di perusahaan startup maupun korporasi'
-            },
-            {
-                id: 'car-4',
-                title: 'Dokter & Tenaga Medis Klinis',
-                category: 'Kesehatan',
-                description: 'Mendiagnosis, mengobati, dan mencegah penyakit serta mendampingi pasien dalam menjaga kualitas kesehatan fisik secara holistik.',
-                skills: ['Empati & Komunikasi', 'Analisis Klinis', 'Ketelitian Tinggi', 'Manajemen Stres'],
-                majors: ['Pendidikan Dokter', 'Keperawatan', 'Farmasi', 'Kesehatan Masyarakat'],
-                outlook: 'Stabil & Esensial — Kebutuhan tenaga medis selalu meningkat'
-            },
-            {
-                id: 'car-5',
-                title: 'UI/UX Designer & Creative Director',
-                category: 'Kreatif',
-                description: 'Menciptakan pengalaman pengguna yang intuitif dan antarmuka visual yang estetis pada produk digital melalui riset pengguna dan prototyping.',
-                skills: ['Design Thinking', 'Figma & Prototyping', 'Riset Pengguna', 'Estetika Visual'],
-                majors: ['Desain Komunikasi Visual (DKV)', 'Desain Produk', 'Sistem Informasi'],
-                outlook: 'Tinggi — Setiap produk digital membutuhkan desainer pengalaman'
-            },
-            {
-                id: 'car-6',
-                title: 'Pendidik Digital & Instructional Designer',
-                category: 'Pendidikan',
-                description: 'Merancang kurikulum modern, media pembelajaran interaktif, dan membimbing generasi muda mengembangkan potensi akademik maupun karirnya.',
-                skills: ['Pedagogi Modern', 'Public Speaking', 'Teknologi Pendidikan', 'Empati'],
-                majors: ['Teknologi Pendidikan', 'Bimbingan dan Konseling', 'Pendidikan Profesi Guru'],
-                outlook: 'Tinggi — Transformasi EdTech membuka banyak peluang baru'
-            }
-        ];
-
-        const SEED_COUNSELINGS = [
-            {
-                id: 'cns-1',
-                studentId: 'usr-siswa-1',
-                studentName: 'Andi Pratama',
-                studentKelas: 'XII IPA 1',
-                topic: 'Pemilihan Jurusan Kuliah (SNBP/SNBT)',
-                date: '2026-11-24',
-                time: '10:00',
-                notes: 'Saya masih ragu memilih antara Teknik Informatika atau Sains Data sesuai hasil tes minat saya.',
-                status: 'Disetujui',
-                guruNotes: 'Jadwal disetujui di Ruang BK 1. Silakan bawa rapor semester 1-5 agar kita petakan peluang SNBP-nya ya, Andi.',
-                createdAt: '2026-11-18T09:00:00.000Z'
-            },
-            {
-                id: 'cns-2',
-                studentId: 'usr-siswa-2',
-                studentName: 'Nadia Putri Rahayu',
-                studentKelas: 'XII IPS 2',
-                topic: 'Persiapan Portofolio Desain & Karir Kreatif',
-                date: '2026-11-26',
-                time: '13:30',
-                notes: 'Ingin berdiskusi tentang persyaratan portofolio untuk jurusan DKV di PTN favorit.',
-                status: 'Menunggu',
-                guruNotes: '',
-                createdAt: '2026-11-19T08:15:00.000Z'
-            },
-            {
-                id: 'cns-3',
-                studentId: 'usr-siswa-3',
-                studentName: 'Budi Santoso',
-                studentKelas: 'XI IPA 3',
-                topic: 'Eksplorasi Minat & Bakat Karir',
-                date: '2026-11-12',
-                time: '11:00',
-                notes: 'Ingin tahu ekstrakurikuler dan lomba apa yang cocok untuk persiapan jurusan Bisnis Digital.',
-                status: 'Selesai',
-                guruNotes: 'Budi sangat antusias di bidang manajemen. Disarankan aktif di OSIS divisi kewirausahaan dan mengikuti lomba Business Plan tingkat SMA.',
-                createdAt: '2026-11-10T11:00:00.000Z'
-            }
-        ];
-
-        // =====================================================================
-        // 3. DATA KUIS MINAT KARIR (RIASEC)
+        // 2. DATA PERTANYAAN & PROFIL KUIS MINAT KARIR (RIASEC)
         // =====================================================================
         const RIASEC_QUESTIONS = [
             {
@@ -436,42 +221,42 @@
         };
 
         // =====================================================================
-        // 4. STATE APLIKASI TERPUSAT
+        // 3. STATE APLIKASI (KOSONG TANPA DATA DEFAULT)
         // =====================================================================
         const state = {
-            // Data real-time dari Firebase (atau fallback memori)
             users: [],
             careers: [],
             counselings: [],
             guruBkCode: DEFAULT_GURU_CODE,
             isFirebaseConnected: false,
 
-            // Sesi pengguna aktif di aplikasi Grow Impian
             currentUser: null,
 
-            // Navigasi & UI state
             authRoleTab: 'siswa', // 'siswa' | 'guru_bk' | 'admin'
             authMode: 'login',    // 'login' | 'register'
             authError: '',
+            authSuccess: '',
+            prefillEmail: '',
+
             activeTab: 'overview',
             mobileMenuOpen: false,
 
-            // Filter & Pencarian UI
-            careerCategoryFilter: 'Semua',
-            careerSearch: '',
-            counselingStatusFilter: 'Semua',
-            userRoleFilter: 'Semua',
-            userSearch: '',
-            studentSearch: '',
-
-            // State Kuis Minat Karir
+            // Kuis RIASEC
             quizActive: false,
             quizStep: 0,
-            quizAnswers: []
+            quizAnswers: [],
+
+            // Pencarian & Filter
+            careerSearch: '',
+            careerCategoryFilter: 'Semua',
+            counselingStatusFilter: 'Semua',
+            studentSearch: '',
+            userSearch: '',
+            userRoleFilter: 'Semua'
         };
 
         // =====================================================================
-        // 5. HELPER UTILITAS (ESCAPE HTML, TOAST, MODAL, FORMAT TANGGAL)
+        // 4. UTILITAS UI (TOAST, MODAL, LOADER, ESCAPE HTML)
         // =====================================================================
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
@@ -481,6 +266,66 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        function refreshIcons() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById('app-loader');
+            if (!loader || loader.classList.contains('hidden')) return;
+            loader.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => loader.classList.add('hidden'), 300);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const styles = {
+                success: 'bg-emerald-600 text-white border-emerald-500',
+                error: 'bg-rose-600 text-white border-rose-500',
+                info: 'bg-slate-900 text-white border-slate-700'
+            };
+            const icons = {
+                success: 'check-circle-2',
+                error: 'alert-circle',
+                info: 'info'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-start gap-2.5 px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-medium fade-in ${styles[type] || styles.info}`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                <span class="flex-1 leading-snug">${escapeHtml(message)}</span>
+            `;
+            container.appendChild(toast);
+            refreshIcons();
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function openModal(html) {
+            const root = document.getElementById('modal-root');
+            const content = document.getElementById('modal-content');
+            if (!root || !content) return;
+            content.innerHTML = html;
+            root.classList.remove('hidden');
+            root.classList.add('flex');
+            refreshIcons();
+        }
+
+        function closeModal() {
+            const root = document.getElementById('modal-root');
+            if (!root) return;
+            root.classList.add('hidden');
+            root.classList.remove('flex');
         }
 
         function formatDate(dateStr) {
@@ -494,64 +339,14 @@
             }
         }
 
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
-
-            const colors = {
-                success: 'bg-slate-900 text-white border-l-4 border-emerald-500',
-                error: 'bg-red-600 text-white border-l-4 border-red-900',
-                info: 'bg-indigo-600 text-white border-l-4 border-indigo-900',
-                warning: 'bg-amber-500 text-slate-950 border-l-4 border-amber-800'
-            };
-            const icons = {
-                success: 'check-circle-2',
-                error: 'alert-circle',
-                info: 'info',
-                warning: 'alert-triangle'
-            };
-
-            const toast = document.createElement('div');
-            toast.className = `pointer-events-auto flex items-start gap-3 px-4 py-3.5 rounded-xl shadow-xl text-sm font-medium fade-in ${colors[type] || colors.info}`;
-            toast.innerHTML = `
-                <i data-lucide="${icons[type] || 'info'}" class="w-5 h-5 shrink-0 mt-0.5"></i>
-                <div class="flex-1 leading-snug">${escapeHtml(message)}</div>
-            `;
-            container.appendChild(toast);
-            refreshIcons();
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(12px)';
-                toast.style.transition = 'all 0.25s ease';
-                setTimeout(() => toast.remove(), 260);
-            }, 3600);
-        }
-
-        function openModal(htmlContent) {
-            const root = document.getElementById('modal-root');
-            const content = document.getElementById('modal-content');
-            content.innerHTML = htmlContent;
-            root.classList.remove('hidden');
-            root.classList.add('flex');
-            refreshIcons();
-        }
-
-        function closeModal() {
-            const root = document.getElementById('modal-root');
-            root.classList.add('hidden');
-            root.classList.remove('flex');
-        }
-
-        // Tutup modal jika klik backdrop
-        document.getElementById('modal-root').addEventListener('click', (e) => {
-            if (e.target.id === 'modal-root') closeModal();
-        });
-
-        function refreshIcons() {
-            if (window.lucide && typeof window.lucide.createIcons === 'function') {
-                window.lucide.createIcons();
+        function getRoleBadge(role) {
+            if (role === 'admin') {
+                return '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-900 text-white">Admin</span>';
             }
+            if (role === 'guru_bk') {
+                return '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">Guru BK</span>';
+            }
+            return '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">Siswa</span>';
         }
 
         function getStatusBadge(status) {
@@ -562,186 +357,111 @@
                 'Ditolak': 'bg-rose-100 text-rose-800 border-rose-200'
             };
             const cls = map[status] || 'bg-slate-100 text-slate-700 border-slate-200';
-            return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cls}">${escapeHtml(status)}</span>`;
-        }
-
-        function getRoleBadge(role) {
-            const map = {
-                'admin': { label: 'Admin', cls: 'bg-slate-900 text-white' },
-                'guru_bk': { label: 'Guru BK', cls: 'bg-indigo-100 text-indigo-800' },
-                'siswa': { label: 'Siswa', cls: 'bg-emerald-100 text-emerald-800' }
-            };
-            const item = map[role] || { label: role, cls: 'bg-slate-100 text-slate-700' };
-            return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${item.cls}">${item.label}</span>`;
+            return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${cls}">${escapeHtml(status)}</span>`;
         }
 
         // =====================================================================
-        // 6. LAPISAN DATA (FIREBASE FIRESTORE + FALLBACK MEMORI)
+        // 5. INISIALISASI FIREBASE & LISTENER REAL-TIME (TANPA SEED DATA)
         // =====================================================================
-        function colRef(name) {
-            return collection(db, 'artifacts', appId, 'public', 'data', name);
-        }
-
-        function docRef(name, id) {
-            return doc(db, 'artifacts', appId, 'public', 'data', name, id);
-        }
-
         async function initFirebaseAndData() {
-            const loaderStatus = document.getElementById('loader-status');
-
-            if (firebaseConfig && firebaseConfig.apiKey) {
-                try {
-                    loaderStatus.textContent = 'Mengautentikasi sesi Firebase...';
-                    const app = initializeApp(firebaseConfig);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-
-                    // RULE 3: Autentikasi terlebih dahulu sebelum operasi Firestore
-                    if (initialAuthToken) {
-                        const cred = await signInWithCustomToken(auth, initialAuthToken);
-                        firebaseUser = cred.user;
-                    } else {
-                        const cred = await signInAnonymously(auth);
-                        firebaseUser = cred.user;
-                    }
-
-                    useFirebase = true;
-                    state.isFirebaseConnected = true;
-
-                    loaderStatus.textContent = 'Menyiapkan data awal Grow Impian...';
-                    await seedDatabaseIfEmpty();
-
-                    loaderStatus.textContent = 'Menyinkronkan data real-time...';
-                    attachRealtimeListeners();
-                } catch (err) {
-                    console.error('Firebase error, beralih ke mode memori lokal:', err);
-                    initFallbackMemoryMode();
-                }
-            } else {
-                initFallbackMemoryMode();
-            }
-
-            // Sembunyikan loader & render tampilan awal
-            setTimeout(() => {
-                const loader = document.getElementById('app-loader');
-                if (loader) {
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.remove(), 300);
-                }
+            // Pengaman agar layar loading tidak pernah stuck melebihi 5 detik
+            const safetyTimer = setTimeout(() => {
+                hideLoader();
                 render();
-            }, 350);
-        }
+            }, 5000);
 
-        function initFallbackMemoryMode() {
-            useFirebase = false;
-            state.isFirebaseConnected = false;
-            state.users = JSON.parse(JSON.stringify(SEED_USERS));
-            state.careers = JSON.parse(JSON.stringify(SEED_CAREERS));
-            state.counselings = JSON.parse(JSON.stringify(SEED_COUNSELINGS));
-            state.guruBkCode = DEFAULT_GURU_CODE;
-        }
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
 
-        async function seedDatabaseIfEmpty() {
-            if (!useFirebase || !firebaseUser) return;
+                await signInAnonymously(auth);
+                useFirebase = true;
+                state.isFirebaseConnected = true;
 
-            // Cek & seed settings/security
-            const secRef = docRef('settings', 'security');
-            const secSnap = await getDoc(secRef);
-            if (!secSnap.exists()) {
-                await setDoc(secRef, {
-                    guruBkCode: DEFAULT_GURU_CODE,
-                    updatedAt: new Date().toISOString()
-                });
-            }
-
-            // Cek & seed users
-            const usersSnap = await getDocs(colRef('users'));
-            if (usersSnap.empty) {
-                for (const u of SEED_USERS) {
-                    await setDoc(docRef('users', u.id), u);
-                }
-            }
-
-            // Cek & seed careers
-            const careersSnap = await getDocs(colRef('careers'));
-            if (careersSnap.empty) {
-                for (const c of SEED_CAREERS) {
-                    await setDoc(docRef('careers', c.id), c);
-                }
-            }
-
-            // Cek & seed counselings
-            const cnsSnap = await getDocs(colRef('counselings'));
-            if (cnsSnap.empty) {
-                for (const cs of SEED_COUNSELINGS) {
-                    await setDoc(docRef('counselings', cs.id), cs);
-                }
+                setupRealtimeListeners();
+            } catch (err) {
+                console.error('Gagal menghubungkan ke Firebase, beralih ke mode memori lokal:', err);
+                useFirebase = false;
+                state.isFirebaseConnected = false;
+                showToast('Koneksi Firebase gagal. Aplikasi berjalan dalam mode memori lokal sementara.', 'error');
+            } finally {
+                clearTimeout(safetyTimer);
+                hideLoader();
+                render();
             }
         }
 
-        function attachRealtimeListeners() {
-            if (!useFirebase || !firebaseUser) return;
+        function setupRealtimeListeners() {
+            if (!db) return;
 
-            // Listener Users
-            onSnapshot(colRef('users'), (snap) => {
-                state.users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                // Perbarui referensi currentUser jika sedang login
+            // Listener Koleksi: users
+            onSnapshot(collection(db, 'users'), (snap) => {
+                const list = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+                list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                state.users = list;
+
+                // Sinkronkan data sesi aktif jika user sedang login
                 if (state.currentUser) {
-                    const updated = state.users.find(u => u.id === state.currentUser.id);
-                    if (updated) state.currentUser = updated;
+                    const updated = list.find(u => u.id === state.currentUser.id);
+                    if (updated) {
+                        state.currentUser = updated;
+                    }
                 }
                 render();
-            }, (err) => {
-                console.error('Error listener users:', err);
-            });
+            }, (err) => console.error('Listener users error:', err));
 
-            // Listener Careers
-            onSnapshot(colRef('careers'), (snap) => {
-                state.careers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Listener Koleksi: counselings
+            onSnapshot(collection(db, 'counselings'), (snap) => {
+                const list = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+                list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                state.counselings = list;
                 render();
-            }, (err) => {
-                console.error('Error listener careers:', err);
-            });
+            }, (err) => console.error('Listener counselings error:', err));
 
-            // Listener Counselings
-            onSnapshot(colRef('counselings'), (snap) => {
-                state.counselings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                // Sort di memori JavaScript berdasarkan createdAt terbaru
-                state.counselings.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+            // Listener Koleksi: careers
+            onSnapshot(collection(db, 'careers'), (snap) => {
+                const list = [];
+                snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+                list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                state.careers = list;
                 render();
-            }, (err) => {
-                console.error('Error listener counselings:', err);
-            });
+            }, (err) => console.error('Listener careers error:', err));
 
-            // Listener Security Settings (Kode Unik Guru BK)
-            onSnapshot(docRef('settings', 'security'), (snap) => {
-                if (snap.exists() && snap.data().guruBkCode) {
-                    state.guruBkCode = snap.data().guruBkCode;
+            // Listener Dokumen Pengaturan: settings/config (hanya baca, tidak menulis otomatis)
+            onSnapshot(doc(db, 'settings', 'config'), (docSnap) => {
+                if (docSnap.exists() && docSnap.data().guruBkCode) {
+                    state.guruBkCode = String(docSnap.data().guruBkCode).toUpperCase();
                 } else {
                     state.guruBkCode = DEFAULT_GURU_CODE;
                 }
                 render();
-            }, (err) => {
-                console.error('Error listener settings:', err);
-            });
+            }, (err) => console.error('Listener settings error:', err));
         }
 
-        // ---- OPERASI CRUD TERPADU ----
-        async function dbCreateUser(userObj) {
-            const newId = 'usr-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
-            const payload = { ...userObj, id: newId, createdAt: new Date().toISOString() };
-            if (useFirebase && firebaseUser) {
-                await setDoc(docRef('users', newId), payload);
-            } else {
-                state.users.push(payload);
-                render();
+        // =====================================================================
+        // 6. OPERASI CRUD FIRESTORE (DENGAN FALLBACK LOKAL AMAN)
+        // =====================================================================
+        async function dbCreateUser(payload) {
+            const data = {
+                ...payload,
+                createdAt: new Date().toISOString()
+            };
+            if (useFirebase && db) {
+                const ref = await addDoc(collection(db, 'users'), data);
+                return { id: ref.id, ...data };
             }
-            return payload;
+            const localItem = { id: 'usr-' + Date.now(), ...data };
+            state.users.unshift(localItem);
+            render();
+            return localItem;
         }
 
         async function dbUpdateUser(userId, updates) {
-            if (useFirebase && firebaseUser) {
-                await updateDoc(docRef('users', userId), updates);
+            if (useFirebase && db) {
+                await updateDoc(doc(db, 'users', userId), updates);
             } else {
                 const idx = state.users.findIndex(u => u.id === userId);
                 if (idx !== -1) {
@@ -755,31 +475,32 @@
         }
 
         async function dbDeleteUser(userId) {
-            if (useFirebase && firebaseUser) {
-                await deleteDoc(docRef('users', userId));
+            if (useFirebase && db) {
+                await deleteDoc(doc(db, 'users', userId));
             } else {
                 state.users = state.users.filter(u => u.id !== userId);
                 render();
             }
         }
 
-        async function dbCreateCounseling(cnsObj) {
-            const newId = 'cns-' + Date.now();
-            const payload = { ...cnsObj, id: newId, createdAt: new Date().toISOString() };
-            if (useFirebase && firebaseUser) {
-                await setDoc(docRef('counselings', newId), payload);
+        async function dbCreateCounseling(payload) {
+            const data = {
+                ...payload,
+                createdAt: new Date().toISOString()
+            };
+            if (useFirebase && db) {
+                await addDoc(collection(db, 'counselings'), data);
             } else {
-                state.counselings.unshift(payload);
+                state.counselings.unshift({ id: 'cns-' + Date.now(), ...data });
                 render();
             }
-            return payload;
         }
 
-        async function dbUpdateCounseling(cnsId, updates) {
-            if (useFirebase && firebaseUser) {
-                await updateDoc(docRef('counselings', cnsId), updates);
+        async function dbUpdateCounseling(id, updates) {
+            if (useFirebase && db) {
+                await updateDoc(doc(db, 'counselings', id), updates);
             } else {
-                const idx = state.counselings.findIndex(c => c.id === cnsId);
+                const idx = state.counselings.findIndex(c => c.id === id);
                 if (idx !== -1) {
                     state.counselings[idx] = { ...state.counselings[idx], ...updates };
                 }
@@ -787,130 +508,147 @@
             }
         }
 
-        async function dbCreateCareer(carObj) {
-            const newId = 'car-' + Date.now();
-            const payload = { ...carObj, id: newId, createdAt: new Date().toISOString() };
-            if (useFirebase && firebaseUser) {
-                await setDoc(docRef('careers', newId), payload);
+        async function dbCreateCareer(payload) {
+            const data = {
+                ...payload,
+                createdAt: new Date().toISOString()
+            };
+            if (useFirebase && db) {
+                await addDoc(collection(db, 'careers'), data);
             } else {
-                state.careers.unshift(payload);
+                state.careers.unshift({ id: 'car-' + Date.now(), ...data });
                 render();
             }
-            return payload;
         }
 
-        async function dbDeleteCareer(carId) {
-            if (useFirebase && firebaseUser) {
-                await deleteDoc(docRef('careers', carId));
+        async function dbDeleteCareer(id) {
+            if (useFirebase && db) {
+                await deleteDoc(doc(db, 'careers', id));
             } else {
-                state.careers = state.careers.filter(c => c.id !== carId);
+                state.careers = state.careers.filter(c => c.id !== id);
                 render();
             }
         }
 
         async function dbUpdateGuruCode(newCode) {
-            const cleanCode = newCode.trim().toUpperCase();
-            if (useFirebase && firebaseUser) {
-                await setDoc(docRef('settings', 'security'), {
-                    guruBkCode: cleanCode,
+            const clean = newCode.trim().toUpperCase();
+            if (useFirebase && db) {
+                await setDoc(doc(db, 'settings', 'config'), {
+                    guruBkCode: clean,
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
             } else {
-                state.guruBkCode = cleanCode;
+                state.guruBkCode = clean;
                 render();
             }
         }
 
         // =====================================================================
-        // 7. RENDER HALAMAN AUTENTIKASI (SPLIT-SCREEN PROFESIONAL)
+        // 7. HALAMAN AUTENTIKASI (SPLIT-SCREEN PROFESIONAL)
         // =====================================================================
         function renderAuthPage() {
             const role = state.authRoleTab;
-            const mode = role === 'admin' ? 'login' : state.authMode;
-            const isRegister = mode === 'register';
+            const isRegister = state.authMode === 'register';
+            const roleLabels = {
+                siswa: 'Siswa',
+                guru_bk: 'Guru BK',
+                admin: 'Admin'
+            };
 
             return `
-            <div class="min-h-screen flex flex-col lg:flex-row bg-white">
-                <!-- SISI KIRI: BRANDING GROW IMPIAN -->
-                <div class="lg:w-5/12 xl:w-1/2 hero-pattern text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden">
+            <div class="min-h-screen grid grid-cols-1 lg:grid-cols-12">
+                <!-- PANEL KIRI: BRANDING & KEUNGGULAN -->
+                <div class="hidden lg:flex lg:col-span-5 hero-pattern text-white p-10 xl:p-14 flex-col justify-between relative overflow-hidden">
                     <div class="relative z-10">
-                        <div class="flex items-center gap-3 mb-10">
-                            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                        <div class="flex items-center gap-3 mb-12">
+                            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                                 <i data-lucide="compass" class="w-6 h-6 text-white"></i>
                             </div>
                             <div>
-                                <span class="text-2xl font-extrabold tracking-tight block leading-none">Grow Impian</span>
-                                <span class="text-xs font-medium text-emerald-400 tracking-wider uppercase">Platform Bimbingan Karir</span>
+                                <div class="text-xl font-extrabold tracking-tight">Grow Impian</div>
+                                <div class="text-xs text-emerald-400 font-medium">Platform Bimbingan Karir Sekolah</div>
                             </div>
                         </div>
 
-                        <div class="max-w-lg">
-                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-emerald-300 mb-6">
-                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                ${state.isFirebaseConnected ? 'Terhubung ke Cloud Firebase Real-Time' : 'Mode Siap Pakai (Integrasi Firebase Aktif)'}
-                            </div>
-                            <h1 class="text-3xl sm:text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight mb-5">
-                                Rancang Masa Depan &amp; <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-300">Karir Impianmu</span> Sejak Bangku Sekolah.
-                            </h1>
-                            <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-8">
-                                Ekosistem bimbingan konseling karir modern yang menghubungkan Siswa, Guru BK, dan Admin sekolah dalam satu platform terpadu berbasis asesmen minat RIASEC.
-                            </p>
+                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-medium text-emerald-300 mb-6">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            Terintegrasi Firebase Real-Time
+                        </span>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
-                                        <i data-lucide="sparkles" class="w-5 h-5"></i>
-                                    </div>
-                                    <h3 class="font-semibold text-sm text-white">Tes Minat RIASEC</h3>
-                                    <p class="text-xs text-slate-400 mt-1">Pemetaan potensi diri, jurusan kuliah, dan rekomendasi karir presisi.</p>
-                                </div>
-                                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                                    <div class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center mb-3">
-                                        <i data-lucide="calendar-heart" class="w-5 h-5"></i>
-                                    </div>
-                                    <h3 class="font-semibold text-sm text-white">Konseling Terjadwal</h3>
-                                    <p class="text-xs text-slate-400 mt-1">Ajukan sesi bimbingan langsung dengan Guru BK secara transparan.</p>
-                                </div>
+                        <h1 class="text-3xl xl:text-4xl font-extrabold leading-tight mb-4">
+                            Rancang Masa Depan &amp; <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-400">Karir Impianmu</span> Lebih Terarah.
+                        </h1>
+                        <p class="text-slate-300 text-sm leading-relaxed max-w-md">
+                            Sistem bimbingan karir digital terpadu bagi Siswa, Guru BK, dan Administrator untuk pemetaan minat RIASEC, penjadwalan konseling, serta eksplorasi profesi.
+                        </p>
+                    </div>
+
+                    <div class="relative z-10 space-y-4 mt-10">
+                        <div class="flex items-start gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/10">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold">Tes Minat Karir RIASEC</div>
+                                <div class="text-xs text-slate-400 mt-0.5">Analisis kepribadian karir beserta rekomendasi jurusan kuliah dan profesi.</div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/10">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+                                <i data-lucide="calendar-check-2" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold">Konseling Terjadwal Bersama Guru BK</div>
+                                <div class="text-xs text-slate-400 mt-0.5">Ajukan jadwal bimbingan dan pantau catatan hasil konseling secara transparan.</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="relative z-10 mt-10 pt-6 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                        <span>&copy; 2026 Grow Impian EdTech.</span>
-                        <span class="flex items-center gap-1.5">
-                            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
-                            Portal Aman Multi-Peran
-                        </span>
+                    <div class="relative z-10 text-xs text-slate-500 pt-8">
+                        &copy; ${new Date().getFullYear()} Grow Impian. Layanan Bimbingan &amp; Konseling Karir.
                     </div>
                 </div>
 
-                <!-- SISI KANAN: FORM LOGIN / DAFTAR MULTI-ROLE -->
-                <div class="lg:w-7/12 xl:w-1/2 flex items-center justify-center p-6 sm:p-10 lg:p-14 bg-slate-50">
-                    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/70 border border-slate-200/80 p-6 sm:p-8 fade-in">
-                        <div class="mb-6">
-                            <h2 class="text-2xl font-bold text-slate-900">
-                                ${isRegister ? 'Buat Akun Baru' : 'Masuk ke Portal'}
+                <!-- PANEL KANAN: FORM LOGIN & DAFTAR -->
+                <div class="lg:col-span-7 flex flex-col justify-center items-center p-5 sm:p-10 bg-slate-50">
+                    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200 p-6 sm:p-8 fade-in">
+                        <!-- Header Mobile Brand -->
+                        <div class="flex lg:hidden items-center justify-center gap-2.5 mb-6">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-indigo-500 flex items-center justify-center">
+                                <i data-lucide="compass" class="w-5 h-5 text-white"></i>
+                            </div>
+                            <span class="text-xl font-extrabold text-slate-900">Grow Impian</span>
+                        </div>
+
+                        <div class="text-center mb-6">
+                            <h2 class="text-2xl font-extrabold text-slate-900">
+                                ${isRegister ? `Daftar Akun ${roleLabels[role]}` : `Masuk Portal ${roleLabels[role]}`}
                             </h2>
-                            <p class="text-sm text-slate-500 mt-1">
-                                Pilih peran Anda untuk mengakses dashboard Grow Impian.
+                            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                                ${isRegister ? 'Lengkapi data diri Anda untuk membuat akun baru.' : 'Pilih peran Anda lalu masukkan kredensial untuk melanjutkan.'}
                             </p>
                         </div>
 
-                        <!-- TAB PEMILIH PERAN -->
-                        <div class="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-100 rounded-2xl mb-6" role="tablist">
+                        <!-- PEMILIH PERAN -->
+                        <div class="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-100 rounded-2xl mb-6">
                             ${[
                                 { id: 'siswa', label: 'Siswa', icon: 'graduation-cap' },
                                 { id: 'guru_bk', label: 'Guru BK', icon: 'user-check' },
-                                { id: 'admin', label: 'Admin', icon: 'shield' }
-                            ].map(t => `
-                                <button type="button" data-action="switch-role-tab" data-role="${t.id}"
-                                    class="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${role === t.id
-                                        ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200'
-                                        : 'text-slate-500 hover:text-slate-800'}">
-                                    <i data-lucide="${t.icon}" class="w-4 h-4 ${role === t.id ? (t.id === 'siswa' ? 'text-emerald-600' : t.id === 'guru_bk' ? 'text-indigo-600' : 'text-slate-900') : ''}"></i>
-                                    <span>${t.label}</span>
-                                </button>
-                            `).join('')}
+                                { id: 'admin', label: 'Admin', icon: 'shield-check' }
+                            ].map(item => {
+                                const active = role === item.id;
+                                return `
+                                    <button type="button" data-action="switch-role-tab" data-role="${item.id}"
+                                        class="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all ${
+                                            active
+                                                ? 'bg-white text-slate-900 shadow-sm'
+                                                : 'text-slate-500 hover:text-slate-800'
+                                        }">
+                                        <i data-lucide="${item.icon}" class="w-3.5 h-3.5 ${active ? 'text-emerald-600' : ''}"></i>
+                                        <span>${item.label}</span>
+                                    </button>
+                                `;
+                            }).join('')}
                         </div>
 
                         <!-- PESAN ERROR VALIDASI -->
@@ -921,6 +659,14 @@
                             </div>
                         ` : ''}
 
+                        <!-- PESAN SUKSES PENDAFTARAN -->
+                        ${state.authSuccess ? `
+                            <div class="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm flex items-start gap-2.5 fade-in">
+                                <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 mt-0.5 text-emerald-600"></i>
+                                <span>${escapeHtml(state.authSuccess)}</span>
+                            </div>
+                        ` : ''}
+
                         <!-- FORM AUTENTIKASI -->
                         <form id="auth-form" class="space-y-4">
                             ${isRegister ? `
@@ -928,7 +674,7 @@
                                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nama Lengkap</label>
                                     <div class="relative">
                                         <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                                        <input type="text" id="auth-name" required placeholder="${role === 'guru_bk' ? 'Contoh: Ibu Dewi Anggraini, S.Pd.' : 'Contoh: Raka Pratama'}"
+                                        <input type="text" id="auth-name" required placeholder="${role === 'guru_bk' ? 'Contoh: Ibu Dewi Anggraini, S.Pd.' : role === 'admin' ? 'Contoh: Administrator Sekolah' : 'Contoh: Raka Pratama'}"
                                             class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition">
                                     </div>
                                 </div>
@@ -941,7 +687,7 @@
                                                 class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition">
                                         </div>
                                     </div>
-                                ` : `
+                                ` : role === 'guru_bk' ? `
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">NIP / ID Guru</label>
                                         <div class="relative">
@@ -950,14 +696,14 @@
                                                 class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition">
                                         </div>
                                     </div>
-                                `}
+                                ` : ''}
                             ` : ''}
 
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label>
                                 <div class="relative">
                                     <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                                    <input type="email" id="auth-email" required placeholder="nama@growimpian.id"
+                                    <input type="email" id="auth-email" required value="${!isRegister ? escapeHtml(state.prefillEmail) : ''}" placeholder="nama@email.com"
                                         class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition">
                                 </div>
                             </div>
@@ -996,23 +742,18 @@
                                             ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20'
                                             : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
                                 }">
-                                <span>${isRegister ? 'Daftar & Masuk Sekarang' : `Masuk sebagai ${role === 'guru_bk' ? 'Guru BK' : role === 'admin' ? 'Admin' : 'Siswa'}`}</span>
+                                <span>${isRegister ? `Daftar Akun ${roleLabels[role]}` : `Masuk sebagai ${roleLabels[role]}`}</span>
                                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
                             </button>
                         </form>
 
-                        ${role !== 'admin' ? `
-                            <div class="mt-5 text-center text-xs sm:text-sm text-slate-600">
-                                ${isRegister
-                                    ? `Sudah punya akun? <button type="button" data-action="toggle-auth-mode" class="font-semibold text-emerald-600 hover:underline">Masuk di sini</button>`
-                                    : `Belum punya akun ${role === 'guru_bk' ? 'Guru BK' : 'Siswa'}? <button type="button" data-action="toggle-auth-mode" class="font-semibold text-emerald-600 hover:underline">Daftar sekarang</button>`
-                                }
-                            </div>
-                        ` : `
-                            <div class="mt-5 text-center text-xs text-slate-500">
-                                Akses khusus Administrator Sekolah Grow Impian.
-                            </div>
-                        `}
+                        <!-- TOGGLE MASUK / DAFTAR (TERSEDIA UNTUK SEMUA PERAN) -->
+                        <div class="mt-5 text-center text-xs sm:text-sm text-slate-600">
+                            ${isRegister
+                                ? `Sudah punya akun ${roleLabels[role]}? <button type="button" data-action="toggle-auth-mode" class="font-semibold text-emerald-600 hover:underline">Masuk di sini</button>`
+                                : `Belum punya akun ${roleLabels[role]}? <button type="button" data-action="toggle-auth-mode" class="font-semibold text-emerald-600 hover:underline">Daftar sekarang</button>`
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1020,7 +761,7 @@
         }
 
         // =====================================================================
-        // 8. SHELL DASHBOARD (SIDEBAR RESPONSIF + HEADER PROFIL)
+        // 8. SHELL DASHBOARD (SIDEBAR RESPONSIF + HEADER)
         // =====================================================================
         function getNavItems(role) {
             if (role === 'siswa') {
@@ -1042,7 +783,7 @@
             return [
                 { id: 'overview', label: 'Ringkasan Sistem', icon: 'activity' },
                 { id: 'manage-users', label: 'Manajemen Pengguna', icon: 'users-round' },
-                { id: 'security', label: 'Keamanan & Kode Unik', icon: 'key-round' }
+                { id: 'security', label: 'Kode Unik Guru BK', icon: 'key-round' }
             ];
         }
 
@@ -1059,14 +800,12 @@
 
             return `
             <div class="min-h-screen flex bg-slate-50">
-                <!-- OVERLAY MOBILE SIDEBAR -->
                 ${state.mobileMenuOpen ? `
                     <div data-action="close-mobile-menu" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-30 lg:hidden"></div>
                 ` : ''}
 
                 <!-- SIDEBAR NAVIGASI -->
                 <aside class="fixed lg:sticky top-0 left-0 z-40 h-screen w-72 bg-slate-900 text-slate-200 flex flex-col transition-transform duration-200 ${state.mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}">
-                    <!-- Brand Header -->
                     <div class="p-6 flex items-center justify-between border-b border-slate-800">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
@@ -1084,7 +823,6 @@
                         </button>
                     </div>
 
-                    <!-- Navigation Links -->
                     <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
                         <div class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Menu Utama</div>
                         ${navItems.map(item => {
@@ -1103,7 +841,6 @@
                         }).join('')}
                     </nav>
 
-                    <!-- User Profile Card & Logout -->
                     <div class="p-4 border-t border-slate-800 space-y-3">
                         <div class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/70">
                             <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-emerald-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
@@ -1124,7 +861,6 @@
 
                 <!-- KONTEN UTAMA -->
                 <div class="flex-1 flex flex-col min-w-0">
-                    <!-- Top Header -->
                     <header class="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
                         <div class="flex items-center gap-3 min-w-0">
                             <button type="button" data-action="open-mobile-menu" class="lg:hidden p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100">
@@ -1132,20 +868,19 @@
                             </button>
                             <div class="min-w-0">
                                 <h1 class="text-lg sm:text-xl font-bold text-slate-900 truncate">${currentNav.label}</h1>
-                                <p class="text-xs text-slate-500 hidden sm:block">Selamat datang kembali, ${escapeHtml(user.name)}</p>
+                                <p class="text-xs text-slate-500 hidden sm:block">Selamat datang, ${escapeHtml(user.name)}</p>
                             </div>
                         </div>
 
                         <div class="flex items-center gap-3 shrink-0">
                             <span class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                                <span class="w-2 h-2 rounded-full ${state.isFirebaseConnected ? 'bg-emerald-500' : 'bg-indigo-500'}"></span>
-                                ${state.isFirebaseConnected ? 'Firebase Sync' : 'Mode Lokal'}
+                                <span class="w-2 h-2 rounded-full ${state.isFirebaseConnected ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
+                                ${state.isFirebaseConnected ? 'Firebase Terhubung' : 'Mode Lokal'}
                             </span>
                             ${getRoleBadge(user.role)}
                         </div>
                     </header>
 
-                    <!-- Main Body -->
                     <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto fade-in">
                         ${mainContent}
                     </main>
@@ -1163,10 +898,8 @@
 
             if (state.activeTab === 'overview') {
                 const activeCount = myCounselings.filter(c => c.status === 'Menunggu' || c.status === 'Disetujui').length;
-                const recCount = user.riasec ? user.riasec.careers.length : state.careers.length;
 
                 return `
-                <!-- Stat Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6">
                     <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                         <div class="flex items-center justify-between mb-3">
@@ -1192,17 +925,16 @@
 
                     <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                         <div class="flex items-center justify-between mb-3">
-                            <span class="text-xs font-semibold text-slate-500">Rekomendasi Karir</span>
+                            <span class="text-xs font-semibold text-slate-500">Info Karir Tersedia</span>
                             <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                                 <i data-lucide="briefcase" class="w-5 h-5"></i>
                             </div>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900">${recCount} Profesi</div>
-                        <p class="text-xs text-slate-500 mt-1">${user.riasec ? 'Disesuaikan dengan minat RIASEC Anda' : 'Jelajahi katalog karir tersedia'}</p>
+                        <div class="text-2xl font-extrabold text-slate-900">${state.careers.length} Profesi</div>
+                        <p class="text-xs text-slate-500 mt-1">${state.careers.length > 0 ? 'Jelajahi katalog karir dari Guru BK' : 'Menunggu publikasi dari Guru BK'}</p>
                     </div>
                 </div>
 
-                <!-- Profil Karir & Aksi Cepat -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
                         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -1256,7 +988,6 @@
                         `}
                     </div>
 
-                    <!-- Jadwal Konseling Terbaru -->
                     <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-base font-bold text-slate-900">Konseling Terbaru</h2>
@@ -1264,7 +995,11 @@
                         </div>
                         <div class="space-y-3 flex-1">
                             ${myCounselings.length === 0 ? `
-                                <p class="text-xs text-slate-500 text-center py-8">Belum ada pengajuan konseling.</p>
+                                <div class="text-center py-8 px-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">
+                                    <i data-lucide="calendar-x" class="w-7 h-7 text-slate-400 mx-auto mb-2"></i>
+                                    <p class="text-xs font-medium text-slate-600">Belum ada pengajuan konseling</p>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Ajukan jadwal untuk berdiskusi dengan Guru BK.</p>
+                                </div>
                             ` : myCounselings.slice(0, 3).map(c => `
                                 <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
                                     <div class="flex items-start justify-between gap-2 mb-1">
@@ -1292,9 +1027,9 @@
             }
 
             if (state.activeTab === 'counseling') {
+                const today = new Date().toISOString().split('T')[0];
                 return `
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <!-- Form Pengajuan Konseling -->
                     <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-fit">
                         <h2 class="text-base font-bold text-slate-900 mb-1">Ajukan Sesi Bimbingan BK</h2>
                         <p class="text-xs text-slate-500 mb-5">Pilih jadwal yang nyaman untuk berdiskusi bersama Guru BK.</p>
@@ -1313,7 +1048,7 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal</label>
-                                    <input type="date" id="cns-date" required value="2026-11-25"
+                                    <input type="date" id="cns-date" required value="${today}"
                                         class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500">
                                 </div>
                                 <div>
@@ -1323,7 +1058,7 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Catatan / Pertanyaan Anda</label>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Catatan / Keluhan Anda</label>
                                 <textarea id="cns-notes" rows="3" required placeholder="Ceritakan secara singkat hal yang ingin Anda diskusikan..."
                                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"></textarea>
                             </div>
@@ -1333,7 +1068,6 @@
                         </form>
                     </div>
 
-                    <!-- Riwayat Pengajuan -->
                     <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
                         <div class="flex items-center justify-between mb-5">
                             <div>
@@ -1344,10 +1078,10 @@
                         </div>
 
                         ${myCounselings.length === 0 ? `
-                            <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                                <i data-lucide="calendar-x" class="w-8 h-8 text-slate-400 mx-auto mb-2"></i>
-                                <p class="text-sm font-medium text-slate-600">Belum ada riwayat konseling</p>
-                                <p class="text-xs text-slate-400 mt-1">Gunakan formulir di samping untuk mengajukan jadwal pertama Anda.</p>
+                            <div class="text-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                <i data-lucide="calendar-x" class="w-9 h-9 text-slate-400 mx-auto mb-2.5"></i>
+                                <p class="text-sm font-semibold text-slate-700">Belum ada pengajuan konseling</p>
+                                <p class="text-xs text-slate-500 mt-1">Gunakan formulir di samping untuk mengajukan jadwal bimbingan pertama Anda.</p>
                             </div>
                         ` : `
                             <div class="space-y-4">
@@ -1412,7 +1146,15 @@
                     </div>
                 </div>
 
-                ${filtered.length === 0 ? `
+                ${state.careers.length === 0 ? `
+                    <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="briefcase" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-slate-800">Belum ada info karir yang dipublikasikan</h3>
+                        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Daftar profesi dan wawasan karir akan tampil di sini setelah Guru BK menambahkannya.</p>
+                    </div>
+                ` : filtered.length === 0 ? `
                     <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center">
                         <i data-lucide="search-x" class="w-10 h-10 text-slate-300 mx-auto mb-3"></i>
                         <h3 class="text-sm font-bold text-slate-800">Profesi tidak ditemukan</h3>
@@ -1430,14 +1172,14 @@
                                     <h3 class="text-base font-bold text-slate-900 mb-2">${escapeHtml(c.title)}</h3>
                                     <p class="text-xs text-slate-600 leading-relaxed mb-4 line-clamp-3">${escapeHtml(c.description)}</p>
                                     <div class="mb-4">
-                                        <div class="text-[11px] font-semibold text-slate-500 mb-1.5">Skill Utama:</div>
+                                        <div class="text-[11px] font-semibold text-slate-500 mb-1.5">Keterampilan Utama:</div>
                                         <div class="flex flex-wrap gap-1.5">
                                             ${(c.skills || []).slice(0, 3).map(s => `<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium">${escapeHtml(s)}</span>`).join('')}
                                         </div>
                                     </div>
                                 </div>
                                 <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-                                    <span class="text-[11px] text-indigo-600 font-semibold truncate max-w-[65%]">${escapeHtml((c.majors || [])[0] || 'Multi Jurusan')}</span>
+                                    <span class="text-[11px] text-indigo-600 font-semibold truncate max-w-[65%]">${escapeHtml((c.majors || [])[0] || c.outlook || 'Lihat detail')}</span>
                                     <button type="button" data-action="view-career" data-id="${c.id}"
                                         class="text-xs font-bold text-slate-900 hover:text-emerald-600 flex items-center gap-1 transition">
                                         Detail <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
@@ -1456,7 +1198,6 @@
         function renderStudentQuiz() {
             const user = state.currentUser;
 
-            // Tampilan hasil jika sudah selesai & tidak sedang mengulang kuis
             if (user.riasec && !state.quizActive) {
                 const r = user.riasec;
                 return `
@@ -1509,7 +1250,6 @@
                 `;
             }
 
-            // Jika belum mulai kuis
             if (!state.quizActive) {
                 return `
                 <div class="max-w-2xl mx-auto bg-white rounded-3xl border border-slate-200 p-8 text-center shadow-xs">
@@ -1529,7 +1269,6 @@
                 `;
             }
 
-            // Tampilan pertanyaan kuis aktif
             const q = RIASEC_QUESTIONS[state.quizStep];
             const progress = Math.round(((state.quizStep + 1) / RIASEC_QUESTIONS.length) * 100);
 
@@ -1610,12 +1349,16 @@
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h2 class="text-base font-bold text-slate-900">Antrean Permintaan Konseling Terbaru</h2>
-                            <p class="text-xs text-slate-500">Tindak lanjuti permintaan siswa secara cepat.</p>
+                            <p class="text-xs text-slate-500">Tindak lanjuti permintaan bimbingan siswa secara cepat.</p>
                         </div>
                         <button type="button" data-action="switch-tab" data-tab="manage-counseling" class="text-xs font-semibold text-indigo-600 hover:underline">Kelola Semua</button>
                     </div>
                     ${state.counselings.length === 0 ? `
-                        <p class="text-sm text-slate-500 text-center py-8">Belum ada permintaan konseling.</p>
+                        <div class="text-center py-10 px-4 rounded-2xl bg-slate-50 border border-dashed border-slate-200">
+                            <i data-lucide="inbox" class="w-8 h-8 text-slate-400 mx-auto mb-2"></i>
+                            <p class="text-sm font-semibold text-slate-700">Belum ada pengajuan konseling</p>
+                            <p class="text-xs text-slate-500 mt-1">Permintaan jadwal konseling yang diajukan siswa akan tampil di sini.</p>
+                        </div>
                     ` : `
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
@@ -1675,8 +1418,10 @@
 
                 <div class="space-y-4">
                     ${filtered.length === 0 ? `
-                        <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center text-sm text-slate-500">
-                            Tidak ada data konseling dengan status ini.
+                        <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+                            <i data-lucide="calendar-x" class="w-9 h-9 text-slate-400 mx-auto mb-2.5"></i>
+                            <h3 class="text-sm font-bold text-slate-800">Belum ada pengajuan konseling</h3>
+                            <p class="text-xs text-slate-500 mt-1">Tidak ada data sesi konseling pada filter yang dipilih.</p>
                         </div>
                     ` : filtered.map(c => `
                         <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
@@ -1738,38 +1483,48 @@
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500">
-                                    <th class="py-3 px-3">Nama Siswa</th>
-                                    <th class="py-3 px-3">Kelas</th>
-                                    <th class="py-3 px-3">Hasil Tes RIASEC</th>
-                                    <th class="py-3 px-3">Rekomendasi Jurusan</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100 text-sm">
-                                ${filtered.map(s => `
-                                    <tr class="hover:bg-slate-50/70">
-                                        <td class="py-3.5 px-3">
-                                            <div class="font-semibold text-slate-900">${escapeHtml(s.name)}</div>
-                                            <div class="text-xs text-slate-500">${escapeHtml(s.email)}</div>
-                                        </td>
-                                        <td class="py-3.5 px-3 text-xs font-medium text-slate-700">${escapeHtml(s.kelas || '-')}</td>
-                                        <td class="py-3.5 px-3">
-                                            ${s.riasec
-                                                ? `<span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">${escapeHtml(s.riasec.label)}</span>`
-                                                : `<span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-xs">Belum Mengikuti Tes</span>`
-                                            }
-                                        </td>
-                                        <td class="py-3.5 px-3 text-xs text-slate-600">
-                                            ${s.riasec ? escapeHtml(s.riasec.majors.slice(0, 3).join(', ')) : '-'}
-                                        </td>
+                    ${students.length === 0 ? `
+                        <div class="text-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                            <i data-lucide="users" class="w-9 h-9 text-slate-400 mx-auto mb-2.5"></i>
+                            <p class="text-sm font-semibold text-slate-700">Belum ada data siswa terdaftar</p>
+                            <p class="text-xs text-slate-500 mt-1">Data siswa akan tampil otomatis setelah siswa mendaftar akun.</p>
+                        </div>
+                    ` : filtered.length === 0 ? `
+                        <div class="text-center py-10 text-xs text-slate-500">Tidak ada siswa yang cocok dengan pencarian Anda.</div>
+                    ` : `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500">
+                                        <th class="py-3 px-3">Nama Siswa</th>
+                                        <th class="py-3 px-3">Kelas</th>
+                                        <th class="py-3 px-3">Hasil Tes RIASEC</th>
+                                        <th class="py-3 px-3">Rekomendasi Jurusan</th>
                                     </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-sm">
+                                    ${filtered.map(s => `
+                                        <tr class="hover:bg-slate-50/70">
+                                            <td class="py-3.5 px-3">
+                                                <div class="font-semibold text-slate-900">${escapeHtml(s.name)}</div>
+                                                <div class="text-xs text-slate-500">${escapeHtml(s.email)}</div>
+                                            </td>
+                                            <td class="py-3.5 px-3 text-xs font-medium text-slate-700">${escapeHtml(s.kelas || '-')}</td>
+                                            <td class="py-3.5 px-3">
+                                                ${s.riasec
+                                                    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">${escapeHtml(s.riasec.label)}</span>`
+                                                    : `<span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-xs">Belum Mengikuti Tes</span>`
+                                                }
+                                            </td>
+                                            <td class="py-3.5 px-3 text-xs text-slate-600">
+                                                ${s.riasec ? escapeHtml(s.riasec.majors.slice(0, 3).join(', ')) : '-'}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
                 </div>
                 `;
             }
@@ -1777,10 +1532,9 @@
             if (state.activeTab === 'manage-careers') {
                 return `
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <!-- Form Tambah Profesi -->
                     <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-fit">
-                        <h2 class="text-base font-bold text-slate-900 mb-1">Tambah Informasi Karir Baru</h2>
-                        <p class="text-xs text-slate-500 mb-5">Info profesi yang ditambahkan langsung tampil di Dashboard Siswa.</p>
+                        <h2 class="text-base font-bold text-slate-900 mb-1">Publikasikan Info Karir Baru</h2>
+                        <p class="text-xs text-slate-500 mb-5">Info profesi yang ditambahkan langsung tersimpan ke Firestore dan tampil di Dashboard Siswa.</p>
 
                         <form id="career-add-form" class="space-y-4">
                             <div>
@@ -1804,7 +1558,7 @@
                                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"></textarea>
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Skill Utama (pisahkan dengan koma)</label>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Keterampilan Utama (pisahkan dengan koma)</label>
                                 <input type="text" id="car-skills" required placeholder="Jaringan Komputer, Analisis Risiko, Python"
                                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
                             </div>
@@ -1814,8 +1568,8 @@
                                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Prospek Karir</label>
-                                <input type="text" id="car-outlook" required placeholder="Sangat Tinggi — Dibutuhkan seluruh perusahaan digital"
+                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Prospek Karir / Estimasi Gaji</label>
+                                <input type="text" id="car-outlook" required placeholder="Contoh: Sangat Tinggi — Rp 8 jt – 20 jt/bulan"
                                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
                             </div>
                             <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-600/20 transition">
@@ -1824,28 +1578,36 @@
                         </form>
                     </div>
 
-                    <!-- Daftar Katalog Karir -->
                     <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-base font-bold text-slate-900">Katalog Karir Aktif (${state.careers.length})</h2>
                         </div>
-                        <div class="space-y-3">
-                            ${state.careers.map(c => `
-                                <div class="p-4 rounded-xl border border-slate-200 flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[11px] font-bold">${escapeHtml(c.category)}</span>
-                                            <h3 class="text-sm font-bold text-slate-900 truncate">${escapeHtml(c.title)}</h3>
+                        ${state.careers.length === 0 ? `
+                            <div class="text-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                <i data-lucide="book-marked" class="w-9 h-9 text-slate-400 mx-auto mb-2.5"></i>
+                                <p class="text-sm font-semibold text-slate-700">Belum ada info karir yang dipublikasikan</p>
+                                <p class="text-xs text-slate-500 mt-1">Tambahkan informasi profesi melalui formulir di samping.</p>
+                            </div>
+                        ` : `
+                            <div class="space-y-3">
+                                ${state.careers.map(c => `
+                                    <div class="p-4 rounded-xl border border-slate-200 flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[11px] font-bold">${escapeHtml(c.category)}</span>
+                                                <h3 class="text-sm font-bold text-slate-900 truncate">${escapeHtml(c.title)}</h3>
+                                            </div>
+                                            <p class="text-xs text-slate-600 line-clamp-2">${escapeHtml(c.description)}</p>
+                                            ${c.outlook ? `<p class="text-[11px] text-indigo-600 font-medium mt-1">${escapeHtml(c.outlook)}</p>` : ''}
                                         </div>
-                                        <p class="text-xs text-slate-600 line-clamp-2">${escapeHtml(c.description)}</p>
+                                        <button type="button" data-action="delete-career" data-id="${c.id}"
+                                            class="p-2 rounded-lg text-rose-500 hover:bg-rose-50 transition shrink-0" title="Hapus Profesi">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
                                     </div>
-                                    <button type="button" data-action="delete-career" data-id="${c.id}"
-                                        class="p-2 rounded-lg text-rose-500 hover:bg-rose-50 transition shrink-0" title="Hapus Profesi">
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
-                            `).join('')}
-                        </div>
+                                `).join('')}
+                            </div>
+                        `}
                     </div>
                 </div>
                 `;
@@ -1858,9 +1620,11 @@
         // 11. DASHBOARD ADMIN
         // =====================================================================
         function renderAdminContent() {
+            const totalUsers = state.users.length;
             const totalSiswa = state.users.filter(u => u.role === 'siswa').length;
             const totalGuru = state.users.filter(u => u.role === 'guru_bk').length;
             const totalCns = state.counselings.length;
+            const totalCareers = state.careers.length;
 
             if (state.activeTab === 'overview') {
                 const testedStudents = state.users.filter(u => u.role === 'siswa' && u.riasec).length;
@@ -1882,15 +1646,15 @@
                             <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><i data-lucide="user-check" class="w-5 h-5"></i></div>
                         </div>
                         <div class="text-2xl font-extrabold text-slate-900">${totalGuru}</div>
-                        <p class="text-xs text-slate-500 mt-1">Konselor aktif terdaftar</p>
+                        <p class="text-xs text-slate-500 mt-1">Total ${totalUsers} akun pengguna</p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold text-slate-500">Total Sesi Konseling</span>
+                            <span class="text-xs font-semibold text-slate-500">Konseling &amp; Karir</span>
                             <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center"><i data-lucide="calendar-heart" class="w-5 h-5"></i></div>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900">${totalCns}</div>
-                        <p class="text-xs text-slate-500 mt-1">${state.careers.length} katalog karir aktif</p>
+                        <div class="text-2xl font-extrabold text-slate-900">${totalCns} Sesi</div>
+                        <p class="text-xs text-slate-500 mt-1">${totalCareers} info karir dipublikasikan</p>
                     </div>
                     <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm">
                         <div class="flex items-center justify-between mb-2">
@@ -1917,7 +1681,7 @@
                                             <span class="text-slate-500">${cnt} sesi (${pct}%)</span>
                                         </div>
                                         <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                            <div class="h-full ${barColor} rounded-full" style="width: ${pct}%"></div>
+                                            <div class="h-full ${barColor} rounded-full transition-all" style="width: ${pct}%"></div>
                                         </div>
                                     </div>
                                 `;
@@ -1926,22 +1690,22 @@
                     </div>
 
                     <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-                        <h2 class="text-base font-bold text-slate-900 mb-2">Status Infrastruktur Backend</h2>
-                        <p class="text-xs text-slate-500 mb-4">Informasi integrasi Firebase &amp; kesiapan deployment Vercel.</p>
+                        <h2 class="text-base font-bold text-slate-900 mb-2">Status Infrastruktur Sistem</h2>
+                        <p class="text-xs text-slate-500 mb-4">Pemantauan koneksi real-time database Firebase Firestore.</p>
                         <div class="space-y-3 text-xs">
                             <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                                 <span class="font-semibold text-slate-700">Database Real-Time</span>
-                                <span class="px-2.5 py-1 rounded-full font-semibold ${state.isFirebaseConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800'}">
-                                    ${state.isFirebaseConnected ? 'Firebase Firestore Aktif' : 'Mode Siap Deploy (Fallback)'}
+                                <span class="px-2.5 py-1 rounded-full font-semibold ${state.isFirebaseConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                    ${state.isFirebaseConnected ? 'Firebase Firestore Aktif' : 'Mode Memori Lokal'}
                                 </span>
                             </div>
                             <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                                <span class="font-semibold text-slate-700">Validasi Kode Unik Guru BK</span>
+                                <span class="font-semibold text-slate-700">Kode Unik Guru BK Aktif</span>
                                 <span class="font-mono font-bold text-slate-900">${escapeHtml(state.guruBkCode)}</span>
                             </div>
                             <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                                 <span class="font-semibold text-slate-700">Total Akun Terdaftar</span>
-                                <span class="font-bold text-slate-900">${state.users.length} Pengguna</span>
+                                <span class="font-bold text-slate-900">${totalUsers} Pengguna</span>
                             </div>
                         </div>
                     </div>
@@ -1980,42 +1744,50 @@
                         </button>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500">
-                                    <th class="py-3 px-3">Pengguna</th>
-                                    <th class="py-3 px-3">Peran</th>
-                                    <th class="py-3 px-3">Info Tambahan</th>
-                                    <th class="py-3 px-3 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100 text-sm">
-                                ${filtered.map(u => `
-                                    <tr class="hover:bg-slate-50/70">
-                                        <td class="py-3.5 px-3">
-                                            <div class="font-semibold text-slate-900">${escapeHtml(u.name)}</div>
-                                            <div class="text-xs text-slate-500">${escapeHtml(u.email)}</div>
-                                        </td>
-                                        <td class="py-3.5 px-3">${getRoleBadge(u.role)}</td>
-                                        <td class="py-3.5 px-3 text-xs text-slate-600">
-                                            ${u.role === 'siswa' ? `Kelas ${escapeHtml(u.kelas || '-')}` : u.role === 'guru_bk' ? `NIP: ${escapeHtml(u.nip || '-')}` : 'Akses Penuh Sistem'}
-                                        </td>
-                                        <td class="py-3.5 px-3 text-right">
-                                            ${u.id === state.currentUser.id ? `
-                                                <span class="text-xs text-slate-400 italic">Akun Anda</span>
-                                            ` : `
-                                                <button type="button" data-action="confirm-delete-user" data-id="${u.id}" data-name="${escapeHtml(u.name)}"
-                                                    class="px-3 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 text-xs font-semibold transition inline-flex items-center gap-1">
-                                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus
-                                                </button>
-                                            `}
-                                        </td>
+                    ${filtered.length === 0 ? `
+                        <div class="text-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                            <i data-lucide="users" class="w-9 h-9 text-slate-400 mx-auto mb-2.5"></i>
+                            <p class="text-sm font-semibold text-slate-700">Tidak ada pengguna ditemukan</p>
+                            <p class="text-xs text-slate-500 mt-1">Coba ubah filter pencarian atau tambahkan pengguna baru.</p>
+                        </div>
+                    ` : `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500">
+                                        <th class="py-3 px-3">Pengguna</th>
+                                        <th class="py-3 px-3">Peran</th>
+                                        <th class="py-3 px-3">Info Tambahan</th>
+                                        <th class="py-3 px-3 text-right">Aksi</th>
                                     </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-sm">
+                                    ${filtered.map(u => `
+                                        <tr class="hover:bg-slate-50/70">
+                                            <td class="py-3.5 px-3">
+                                                <div class="font-semibold text-slate-900">${escapeHtml(u.name)}</div>
+                                                <div class="text-xs text-slate-500">${escapeHtml(u.email)}</div>
+                                            </td>
+                                            <td class="py-3.5 px-3">${getRoleBadge(u.role)}</td>
+                                            <td class="py-3.5 px-3 text-xs text-slate-600">
+                                                ${u.role === 'siswa' ? `Kelas ${escapeHtml(u.kelas || '-')}` : u.role === 'guru_bk' ? `NIP: ${escapeHtml(u.nip || '-')}` : 'Akses Penuh Sistem'}
+                                            </td>
+                                            <td class="py-3.5 px-3 text-right">
+                                                ${u.id === state.currentUser.id ? `
+                                                    <span class="text-xs text-slate-400 italic">Akun Anda</span>
+                                                ` : `
+                                                    <button type="button" data-action="confirm-delete-user" data-id="${u.id}" data-name="${escapeHtml(u.name)}"
+                                                        class="px-3 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 text-xs font-semibold transition inline-flex items-center gap-1">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus
+                                                    </button>
+                                                `}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
                 </div>
                 `;
             }
@@ -2030,7 +1802,7 @@
                             </div>
                             <div>
                                 <h2 class="text-lg font-bold text-slate-900">Pengaturan Kode Unik Guru BK</h2>
-                                <p class="text-xs text-slate-500">Kode ini wajib dimasukkan oleh Guru BK saat login maupun mendaftar akun baru.</p>
+                                <p class="text-xs text-slate-500">Kode ini wajib dimasukkan oleh Guru BK saat mendaftar maupun masuk ke sistem.</p>
                             </div>
                         </div>
 
@@ -2047,7 +1819,7 @@
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Perbarui Kode Unik Baru</label>
                                 <input type="text" id="new-guru-code" required minlength="4" maxlength="20" value="${escapeHtml(state.guruBkCode)}"
                                     class="w-full px-4 py-3 rounded-xl border border-slate-200 font-mono font-bold uppercase tracking-widest text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
-                                <p class="text-xs text-slate-500 mt-1.5">Gunakan kombinasi huruf/angka tanpa spasi (default: <strong>GURUKU</strong>).</p>
+                                <p class="text-xs text-slate-500 mt-1.5">Gunakan kombinasi huruf/angka tanpa spasi (bawaan: <strong>GURUKU</strong>).</p>
                             </div>
                             <div class="flex items-center gap-3">
                                 <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition">
@@ -2067,7 +1839,7 @@
         }
 
         // =====================================================================
-        // 12. RENDER UTAMA & PENGIKATAN EVENT
+        // 12. RENDER UTAMA & PENGIKATAN EVENT FORM
         // =====================================================================
         function render() {
             const root = document.getElementById('app');
@@ -2084,25 +1856,21 @@
         }
 
         function bindDynamicEvents() {
-            // Form Login / Register
             const authForm = document.getElementById('auth-form');
             if (authForm) {
                 authForm.addEventListener('submit', handleAuthSubmit);
             }
 
-            // Form Pengajuan Konseling Siswa
             const cnsForm = document.getElementById('counseling-form');
             if (cnsForm) {
                 cnsForm.addEventListener('submit', handleCounselingSubmit);
             }
 
-            // Form Tambah Karir (Guru BK)
             const careerForm = document.getElementById('career-add-form');
             if (careerForm) {
                 careerForm.addEventListener('submit', handleCareerAddSubmit);
             }
 
-            // Form Update Kode Unik (Admin)
             const secForm = document.getElementById('security-code-form');
             if (secForm) {
                 secForm.addEventListener('submit', async (e) => {
@@ -2117,7 +1885,6 @@
                 });
             }
 
-            // Pencarian real-time tanpa kehilangan fokus
             const careerSearchInput = document.getElementById('career-search-input');
             if (careerSearchInput) {
                 careerSearchInput.addEventListener('input', (e) => {
@@ -2158,14 +1925,15 @@
         }
 
         // =====================================================================
-        // 13. HANDLER LOGIKA BISNIS & INTERAKSI
+        // 13. HANDLER LOGIKA BISNIS (DAFTAR -> LOGIN, KONSELING, KARIR, KUIS)
         // =====================================================================
         async function handleAuthSubmit(e) {
             e.preventDefault();
             state.authError = '';
+            state.authSuccess = '';
 
             const role = state.authRoleTab;
-            const mode = role === 'admin' ? 'login' : state.authMode;
+            const mode = state.authMode;
             const email = document.getElementById('auth-email').value.trim().toLowerCase();
             const password = document.getElementById('auth-password').value;
 
@@ -2191,7 +1959,7 @@
                     return;
                 }
 
-                const newUser = await dbCreateUser({
+                await dbCreateUser({
                     name,
                     email,
                     password,
@@ -2201,14 +1969,19 @@
                     riasec: null
                 });
 
-                state.currentUser = newUser;
-                state.activeTab = 'overview';
-                showToast(`Pendaftaran berhasil! Selamat datang, ${newUser.name}.`, 'success');
+                // Alur Daftar -> Login: Jangan langsung masuk dashboard
+                e.target.reset();
+                state.currentUser = null;
+                state.authRoleTab = role;
+                state.authMode = 'login';
+                state.prefillEmail = email;
+                state.authSuccess = 'Pendaftaran berhasil! Silakan login ulang menggunakan email dan kata sandi yang baru didaftarkan.';
+                showToast('Pendaftaran berhasil! Silakan login ulang menggunakan email dan kata sandi yang baru didaftarkan.', 'success');
                 render();
             } else {
                 const found = state.users.find(u => u.email.toLowerCase() === email && u.password === password);
                 if (!found) {
-                    state.authError = 'Email atau kata sandi tidak cocok. Silakan periksa kembali kredensial Anda.';
+                    state.authError = 'Email atau kata sandi tidak cocok. Silakan periksa kembali atau daftar akun baru terlebih dahulu.';
                     render();
                     return;
                 }
@@ -2220,6 +1993,8 @@
                 }
 
                 state.currentUser = found;
+                state.authSuccess = '';
+                state.prefillEmail = '';
                 state.activeTab = 'overview';
                 state.quizActive = false;
                 showToast(`Berhasil masuk sebagai ${found.name}.`, 'success');
@@ -2266,7 +2041,6 @@
         }
 
         async function finishQuiz() {
-            // Hitung frekuensi kode RIASEC
             const tally = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
             state.quizAnswers.forEach(code => {
                 if (tally[code] !== undefined) tally[code]++;
@@ -2283,7 +2057,7 @@
         }
 
         // =====================================================================
-        // 14. EVENT DELEGATION GLOBAL UNTUK SEMUA TOMBOL
+        // 14. EVENT DELEGATION GLOBAL
         // =====================================================================
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('[data-action]');
@@ -2291,11 +2065,12 @@
 
             const action = btn.dataset.action;
 
-            // --- AUTH ACTIONS ---
             if (action === 'switch-role-tab') {
                 state.authRoleTab = btn.dataset.role;
                 state.authMode = 'login';
                 state.authError = '';
+                state.authSuccess = '';
+                state.prefillEmail = '';
                 render();
                 return;
             }
@@ -2303,11 +2078,12 @@
             if (action === 'toggle-auth-mode') {
                 state.authMode = state.authMode === 'login' ? 'register' : 'login';
                 state.authError = '';
+                state.authSuccess = '';
+                state.prefillEmail = '';
                 render();
                 return;
             }
 
-            // --- NAVIGATION & SHELL ---
             if (action === 'switch-tab') {
                 state.activeTab = btn.dataset.tab;
                 state.mobileMenuOpen = false;
@@ -2330,13 +2106,14 @@
             if (action === 'logout') {
                 state.currentUser = null;
                 state.authError = '';
+                state.authSuccess = '';
+                state.prefillEmail = '';
                 state.mobileMenuOpen = false;
                 showToast('Anda telah keluar dari akun.', 'info');
                 render();
                 return;
             }
 
-            // --- STUDENT QUIZ ---
             if (action === 'start-quiz') {
                 state.quizActive = true;
                 state.quizStep = 0;
@@ -2356,7 +2133,6 @@
                 return;
             }
 
-            // --- CAREER FILTER & DETAIL MODAL ---
             if (action === 'filter-career-cat') {
                 state.careerCategoryFilter = btn.dataset.cat;
                 render();
@@ -2381,7 +2157,7 @@
 
                         <div class="space-y-4">
                             <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                <div class="text-xs font-bold text-slate-800 mb-2">Keahlian / Skill Utama</div>
+                                <div class="text-xs font-bold text-slate-800 mb-2">Keterampilan Utama</div>
                                 <div class="flex flex-wrap gap-1.5">
                                     ${(car.skills || []).map(s => `<span class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-700">${escapeHtml(s)}</span>`).join('')}
                                 </div>
@@ -2393,8 +2169,8 @@
                                 </div>
                             </div>
                             <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-100">
-                                <div class="text-xs font-bold text-emerald-900 mb-1">Prospek Karir</div>
-                                <p class="text-xs text-emerald-800">${escapeHtml(car.outlook || 'Prospek cerah dan terus berkembang')}</p>
+                                <div class="text-xs font-bold text-emerald-900 mb-1">Prospek Karir / Estimasi Gaji</div>
+                                <p class="text-xs text-emerald-800">${escapeHtml(car.outlook || 'Prospek berkembang')}</p>
                             </div>
                         </div>
 
@@ -2406,7 +2182,6 @@
                 return;
             }
 
-            // --- GURU BK ACTIONS ---
             if (action === 'filter-cns-status') {
                 state.counselingStatusFilter = btn.dataset.status;
                 render();
@@ -2414,10 +2189,8 @@
             }
 
             if (action === 'quick-cns-status') {
-                const id = btn.dataset.id;
-                const status = btn.dataset.status;
-                await dbUpdateCounseling(id, { status });
-                showToast(`Status konseling diperbarui menjadi "${status}".`, 'success');
+                await dbUpdateCounseling(btn.dataset.id, { status: btn.dataset.status });
+                showToast(`Status konseling diperbarui menjadi "${btn.dataset.status}".`, 'success');
                 return;
             }
 
@@ -2471,7 +2244,6 @@
                 return;
             }
 
-            // --- ADMIN ACTIONS ---
             if (action === 'open-add-user-modal') {
                 openModal(`
                     <div class="p-6">
@@ -2485,23 +2257,24 @@
                                 <select id="mu-role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
                                     <option value="siswa">Siswa</option>
                                     <option value="guru_bk">Guru BK</option>
+                                    <option value="admin">Admin</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nama Lengkap</label>
-                                <input type="text" id="mu-name" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                <input type="text" id="mu-name" required placeholder="Nama lengkap pengguna" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label>
-                                <input type="email" id="mu-email" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                <input type="email" id="mu-email" required placeholder="nama@email.com" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Kata Sandi</label>
-                                <input type="password" id="mu-password" required minlength="4" value="123456" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                <input type="password" id="mu-password" required minlength="4" placeholder="Minimal 4 karakter" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Kelas (untuk Siswa) / NIP (untuk Guru BK)</label>
-                                <input type="text" id="mu-extra" required placeholder="Contoh: XII IPA 1 atau NIP Guru" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Kelas (Siswa) / NIP (Guru BK)</label>
+                                <input type="text" id="mu-extra" placeholder="Opsional untuk Admin" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
                             </div>
                             <div class="flex justify-end gap-2 pt-2">
                                 <button type="button" data-action="close-modal" class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">Batal</button>
@@ -2516,7 +2289,7 @@
                     const name = document.getElementById('mu-name').value.trim();
                     const email = document.getElementById('mu-email').value.trim().toLowerCase();
                     const password = document.getElementById('mu-password').value;
-                    const extra = document.getElementById('mu-extra').value.trim();
+                    const extra = document.getElementById('mu-extra').value.trim() || '-';
 
                     if (state.users.some(u => u.email.toLowerCase() === email)) {
                         showToast('Email sudah terdaftar di sistem.', 'error');
