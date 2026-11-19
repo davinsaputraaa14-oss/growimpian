@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Growimpian — Bimbingan Karir Kuliah & Dunia Kerja</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --blue-bright: #0ea5e9;
+      --blue-primary: #0284c7;
+      --blue-dark: #0f172a;
+      --bg: #f4f8fc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #dc2626;
+      --success: #16a34a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); line-height: 1.5; }
+    .hidden { display: none !important; }
+    a { text-decoration: none; color: inherit; }
+
+    /* Navbar */
+    nav {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .logo-box {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+    .brand-text h1 { font-size: 1.2rem; font-weight: 800; color: var(--blue-primary); line-height: 1.1; }
+    .brand-text span { font-size: 0.75rem; color: var(--muted); }
+
+    .nav-links { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .nav-link-item {
+      font-size: 0.9rem; font-weight: 600; color: #334155; padding: 8px 12px;
+      border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;
+    }
+    .nav-link-item:hover { background: #f1f5f9; color: var(--blue-primary); }
+
+    .btn-pill {
+      padding: 9px 16px; border-radius: 10px; font-weight: 600; font-size: 0.88rem;
+      cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s;
+    }
+    .btn-siswa-nav { background: #f0f9ff; color: var(--blue-primary); border: 1px solid #bae6fd; }
+    .btn-siswa-nav:hover { background: #e0f2fe; }
+    .btn-guru-nav { background: linear-gradient(90deg, #0284c7, #1e293b); color: #fff; }
+    .btn-guru-nav:hover { opacity: 0.92; }
+    .btn-admin-nav { background: #f1f5f9; color: #334155; border: 1px solid var(--border); }
+    .btn-admin-nav:hover { background: #e2e8f0; }
+
+    .container { max-width: 1180px; margin: 0 auto; padding: 1.75rem 1.25rem; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(105deg, #0284c7 0%, #0e5a8a 45%, #1e293b 100%);
+      border-radius: 22px; padding: 3.5rem 3rem; color: #fff;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12); margin-bottom: 2rem;
+    }
+    .hero-badge {
+      display: inline-block; background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25); padding: 6px 16px;
+      border-radius: 999px; font-size: 0.82rem; font-weight: 600; margin-bottom: 1.25rem;
+    }
+    .hero h2 { font-size: clamp(2rem, 4vw, 3.1rem); font-weight: 800; line-height: 1.15; max-width: 680px; margin-bottom: 1.2rem; }
+    .hero h2 span { color: #38bdf8; display: block; }
+    .hero p { max-width: 620px; font-size: 1rem; color: #e2e8f0; margin-bottom: 2rem; }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn-hero-primary {
+      background: #38bdf8; color: #0f172a; padding: 13px 24px; border-radius: 12px;
+      font-weight: 700; font-size: 0.95rem; border: none; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-hero-secondary {
+      background: rgba(255, 255, 255, 0.14); color: #fff; padding: 13px 24px; border-radius: 12px;
+      font-weight: 700; font-size: 0.95rem; border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+
+    /* Explore Cards */
+    .explore-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .explore-card {
+      background: var(--card); border-radius: 18px; border: 1px solid var(--border);
+      overflow: hidden; display: grid; grid-template-columns: 190px 1fr;
+      box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04);
+    }
+    .explore-img {
+      width: 100%; height: 100%; object-fit: cover; min-height: 210px;
+      background: linear-gradient(135deg, #bae6fd, #0284c7); display: block;
+    }
+    .explore-body { padding: 1.5rem; display: flex; flex-direction: column; justify-content: center; }
+    .tag-pill { display: inline-block; width: fit-content; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .tag-blue { background: #e0f2fe; color: #0284c7; }
+    .tag-slate { background: #e2e8f0; color: #334155; }
+    .explore-body h3 { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .explore-body p { font-size: 0.88rem; color: var(--muted); margin-bottom: 1rem; }
+    .explore-link { font-size: 0.88rem; font-weight: 700; color: var(--blue-primary); cursor: pointer; }
+    .explore-link.dark { color: #0f172a; }
+
+    /* Alur Layanan */
+    .alur-box {
+      background: var(--card); border-radius: 20px; border: 1px solid var(--border);
+      padding: 2rem; box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04); margin-bottom: 2.5rem;
+    }
+    .alur-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
+    .alur-title-wrap { display: flex; align-items: center; gap: 14px; }
+    .alur-icon { width: 44px; height: 44px; border-radius: 12px; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .alur-title-wrap h3 { font-size: 1.25rem; font-weight: 800; }
+    .alur-title-wrap p { font-size: 0.85rem; color: var(--muted); }
+    .btn-konsul-link { background: #e0f2fe; color: #0284c7; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+
+    .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; }
+    .step-card { background: #f8fbff; border: 1px solid #dbeafe; border-radius: 14px; padding: 1.5rem 1.25rem; text-align: center; }
+    .step-num { width: 36px; height: 36px; border-radius: 50%; background: #0ea5e9; color: #fff; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.85rem; }
+    .step-card h4 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .step-card p { font-size: 0.83rem; color: var(--muted); }
+
+    /* Footer */
+    footer { background: var(--card); border-top: 1px solid var(--border); padding: 1.75rem 2rem; margin-top: 2rem; }
+    .footer-inner { max-width: 1180px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    .footer-left strong { display: block; font-size: 0.92rem; }
+    .footer-left span { font-size: 0.82rem; color: var(--muted); }
+    .footer-links { display: flex; gap: 12px; font-size: 0.88rem; font-weight: 600; color: var(--blue-primary); }
+    .footer-links a { cursor: pointer; }
+
+    /* Modal Auth */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;
+      padding: 1rem; z-index: 100;
+    }
+    .modal-card { background: #fff; width: 100%; max-width: 430px; border-radius: 18px; padding: 2rem; position: relative; }
+    .modal-close { position: absolute; top: 16px; right: 16px; background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: bold; }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f1f5f9; padding: 5px; border-radius: 10px; margin: 1.25rem 0; }
+    .tab-btn { padding: 9px 6px; border: none; background: transparent; border-radius: 8px; font-weight: 600; font-size: 0.83rem; color: var(--muted); cursor: pointer; }
+    .tab-btn.active { background: var(--blue-primary); color: #fff; }
+
+    .form-group { margin-bottom: 0.9rem; }
+    label { display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 5px; color: #334155; }
+    input, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; font-size: 0.92rem; outline: none; }
+    input:focus, textarea:focus { border-color: var(--blue-primary); }
+    .btn-submit { width: 100%; padding: 12px; background: var(--blue-primary); color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; margin-top: 0.5rem; }
+    .alert { padding: 10px 12px; border-radius: 8px; font-size: 0.84rem; margin-bottom: 1rem; }
+    .alert-error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+    .alert-success { background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
+    .switch-auth { text-align: center; margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
+    .switch-auth a { color: var(--blue-primary); font-weight: 700; cursor: pointer; }
+
+    /* Dashboard */
+    .dash-card { background: #fff; border-radius: 16px; border: 1px solid var(--border); padding: 1.75rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+    .table-wrap { overflow-x: auto; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 11px; border-bottom: 1px solid var(--border); }
+    th { background: #f8fafc; font-size: 0.78rem; text-transform: uppercase; color: var(--muted); }
+    .badge-role { background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .status { padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .status-menunggu { background: #fef3c7; color: #b45309; }
+    .status-disetujui { background: #dbeafe; color: #1d4ed8; }
+    .status-selesai { background: #dcfce7; color: #15803d; }
+    .status-ditolak { background: #fee2e2; color: #b91c1c; }
+    .btn-sm { padding: 5px 10px; border-radius: 6px; border: none; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+
+    @media (max-width: 768px) {
+      .explore-grid, .explore-card { grid-template-columns: 1fr; }
+      .hero { padding: 2rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <div class="nav-brand" onclick="showLanding()">
+      <div class="logo-box">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Growimpian</h1>
+        <span>Bimbingan Karir Kuliah & Dunia Kerja</span>
+      </div>
+    </div>
+
+    <div class="nav-links" id="nav-guest">
+      <span class="nav-link-item" onclick="showLanding()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        Beranda
+      </span>
+      <button class="btn-pill btn-siswa-nav" onclick="openAuthModal('siswa')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+        Login Siswa
+      </button>
+      <button class="btn-pill btn-guru-nav" onclick="openAuthModal('guru_bk')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Masuk Guru BK
+      </button>
+      <button class="btn-pill btn-admin-nav" onclick="openAuthModal('admin')">Admin</button>
+    </div>
+
+    <div class="nav-links hidden" id="nav-user">
+      <span id="nav-name" style="font-weight:700; font-size:0.9rem;">User</span>
+      <span id="nav-role" class="badge-role">ROLE</span>
+      <button class="btn-pill btn-admin-nav" onclick="handleLogout()">Keluar</button>
+    </div>
+  </nav>
+
+  <!-- LANDING PAGE -->
+  <main id="landing-view" class="container">
+    <section class="hero">
+      <div class="hero-badge">Sahabat Masa Depan: Kuliah & Dunia Kerja</div>
+      <h2>Rancang Impian Kuliah & Karirmu Bersama <span>Growimpian</span></h2>
+      <p>
+        Bingung memilih antara melanjutkan kuliah ke perguruan tinggi atau langsung terjun ke dunia kerja?
+        Growimpian hadir membantumu mengenali potensi diri, mengeksplorasi studi & pekerjaan, serta berkonsultasi langsung dengan Guru BK!
+      </p>
+      <div class="hero-actions">
+        <button class="btn-hero-primary" onclick="openAuthModal('siswa')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          Login Siswa Sekarang
+        </button>
+        <button class="btn-hero-secondary" onclick="openAuthModal('guru_bk')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          Masuk Guru BK
+        </button>
+      </div>
+    </section>
+
+    <section class="explore-grid">
+      <div class="explore-card">
+        <img
+          class="explore-img"
+          src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=600&q=80"
+          onerror="this.onerror=null; this.src='https://images.pexels.com/photos/267885/pexels-photo-267885.jpeg?auto=compress&cs=tinysrgb&w=600';"
+          alt="Eksplorasi Dunia Kuliah"
+        />
+        <div class="explore-body">
+          <span class="tag-pill tag-blue">Jalur Pendidikan Lanjut</span>
+          <h3>Eksplorasi Dunia Kuliah</h3>
+          <p>Informasi lengkap PTN, PTS, Kedinasan, jalur seleksi SNBP/SNBT, estimasi biaya, dan peluang beasiswa KIP-Kuliah.</p>
+          <a class="explore-link" onclick="openAuthModal('siswa')">Jelajahi Studi Lanjut →</a>
+        </div>
+      </div>
+
+      <div class="explore-card">
+        <img
+          class="explore-img"
+          src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80"
+          onerror="this.onerror=null; this.src='https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=600';"
+          alt="Eksplorasi Dunia Kerja"
+        />
+        <div class="explore-body">
+          <span class="tag-pill tag-slate">Jalur Profesional & Industri</span>
+          <h3>Eksplorasi Dunia Kerja</h3>
+          <p>Kenali prospek bidang pekerjaan masa depan, kompetensi yang dibutuhkan industri, sertifikasi, dan pelatihan siap kerja.</p>
+          <a class="explore-link dark" onclick="openAuthModal('siswa')">Jelajahi Dunia Kerja →</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="alur-box">
+      <div class="alur-header">
+        <div class="alur-title-wrap">
+          <div class="alur-icon">✦</div>
+          <div>
+            <h3>Alur Layanan Bimbingan Karir Growimpian</h3>
+            <p>Dirancang berdasarkan Prototipe Pengembangan Teknologi Bimbingan dan Konseling</p>
+          </div>
+        </div>
+        <button class="btn-konsul-link" onclick="openAuthModal('siswa')">💬 Link Konsultasi BK Langsung</button>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card"><div class="step-num">1</div><h4>Kenali Diri</h4><p>Refleksi minat, potensi, dan nilai pribadi siswa.</p></div>
+        <div class="step-card"><div class="step-num">2</div><h4>Jelajahi Pilihan</h4><p>Informasi studi lanjut dan dunia kerja yang relevan.</p></div>
+        <div class="step-card"><div class="step-num">3</div><h4>Bandingkan & Rencana</h4><p>Analisis alternatif dan susun action plan masa depan.</p></div>
+        <div class="step-card"><div class="step-num">4</div><h4>Konsultasi BK</h4><p>Kirim respon ke Guru BK & pendampingan lanjutan.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- DASHBOARD SISWA -->
+  <section id="dashboard-siswa" class="container hidden">
+    <div class="grid-2">
+      <div class="dash-card">
+        <h3>Ajukan Jadwal Konseling Karir</h3>
+        <p style="font-size:0.88rem; color:var(--muted); margin-bottom:1.25rem;">Diskusikan rencana kuliah atau dunia kerja bersama Guru BK.</p>
+        <form id="form-konseling">
+          <div class="form-group"><label>Tanggal Konseling</label><input type="date" id="k-tanggal" required /></div>
+          <div class="form-group"><label>Jam Konseling</label><input type="time" id="k-jam" required /></div>
+          <div class="form-group"><label>Topik / Pertanyaan Karir</label><textarea id="k-topik" rows="3" required placeholder="Contoh: Rencana daftar SNBP vs kerja setelah lulus"></textarea></div>
+          <button type="submit" class="btn-submit">Kirim Pengajuan</button>
+        </form>
+      </div>
+      <div class="dash-card">
+        <h3>Riwayat & Catatan Konseling</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Jadwal</th><th>Topik</th><th>Status</th><th>Catatan Guru</th></tr></thead>
+            <tbody id="siswa-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD GURU BK -->
+  <section id="dashboard-guru" class="container hidden">
+    <div class="dash-card">
+      <h3>Daftar Pengajuan Konseling Siswa</h3>
+      <p style="font-size:0.88rem; color:var(--muted);">Kelola jadwal bimbingan dan berikan rekomendasi untuk siswa.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Siswa</th><th>Jadwal</th><th>Topik</th><th>Status</th><th>Catatan & Aksi</th></tr></thead>
+          <tbody id="guru-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD ADMIN -->
+  <section id="dashboard-admin" class="container hidden">
+    <div class="grid-2">
+      <div class="dash-card">
+        <h3>Kelola Kode Khusus Guru BK</h3>
+        <p style="font-size:0.88rem; color:var(--muted); margin-bottom:1rem;">Kode unik untuk validasi pendaftaran & login Guru BK.</p>
+        <form id="form-kode" style="display:flex; gap:8px; margin-bottom:1rem;">
+          <input type="text" id="new-kode" required placeholder="Contoh: GURUKU" />
+          <button type="submit" class="btn-pill btn-guru-nav">+ Tambah</button>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Kode Khusus</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="admin-kode-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="dash-card">
+        <h3>Daftar Pengguna Growimpian</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nama</th><th>Email</th><th>Peran</th></tr></thead>
+            <tbody id="admin-user-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-left">
+        <strong>Growimpian © 2026 - Platform Digital Bimbingan Konseling Karir</strong>
+        <span>Membantu Siswa Merencanakan Studi Lanjutan & Dunia Kerja dengan Tepat</span>
+      </div>
+      <div class="footer-links">
+        <a onclick="showLanding()">Beranda</a> •
+        <a onclick="openAuthModal('siswa')">Login Siswa</a> •
+        <a onclick="openAuthModal('guru_bk')">Masuk Guru BK</a> •
+        <a onclick="openAuthModal('admin')">Admin</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL LOGIN / REGISTER -->
+  <div id="auth-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      <h3 id="auth-title" style="text-align:center; font-size:1.35rem;">Masuk ke Growimpian</h3>
+      <p style="text-align:center; font-size:0.85rem; color:var(--muted);">Pilih peran Anda untuk melanjutkan</p>
+
+      <div class="tabs">
+        <button type="button" class="tab-btn" id="tab-siswa" onclick="setRole('siswa')">Siswa</button>
+        <button type="button" class="tab-btn" id="tab-guru_bk" onclick="setRole('guru_bk')">Guru BK</button>
+        <button type="button" class="tab-btn" id="tab-admin" onclick="setRole('admin')">Admin</button>
+      </div>
+
+      <div id="auth-alert" class="alert hidden"></div>
+
+      <form id="auth-form">
+        <div class="form-group hidden" id="group-nama"><label>Nama Lengkap</label><input type="text" id="input-nama" placeholder="Nama lengkap Anda" /></div>
+        <div class="form-group hidden" id="group-kelas"><label>Kelas</label><input type="text" id="input-kelas" placeholder="Contoh: XII IPA 1" /></div>
+        <div class="form-group"><label id="label-email">Email Siswa</label><input type="email" id="input-email" required placeholder="nama@sekolah.sch.id" /></div>
+        <div class="form-group"><label>Password</label><input type="password" id="input-password" required placeholder="Minimal 6 karakter" /></div>
+        <div class="form-group hidden" id="group-kode"><label>Kode Khusus Guru BK</label><input type="text" id="input-kode" placeholder="Masukkan kode khusus BK" /></div>
+        <button type="submit" class="btn-submit" id="btn-submit">Masuk</button>
+      </form>
+
+      <div class="switch-auth">
+        <span id="switch-text">Belum punya akun?</span>
+        <a id="switch-link" onclick="toggleAuthMode()">Daftar di sini</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // GANTI DENGAN CREDENTIAL SUPABASE KAMU
+    const SUPABASE_URL = 'https://PROJECT_ID_KAMU.supabase.co';
+    const SUPABASE_ANON_KEY = 'ANON_KEY_KAMU_DI_SINI';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentRole = 'siswa';
+    let isRegisterMode = false;
+    let currentUserProfile = null;
+
+    function openAuthModal(role = 'siswa') {
+      isRegisterMode = false;
+      updateAuthModeUI();
+      setRole(role);
+      document.getElementById('auth-modal').classList.remove('hidden');
+    }
+
+    function closeAuthModal() {
+      document.getElementById('auth-modal').classList.add('hidden');
+      hideAlert();
+    }
+
+    function showLanding() {
+      if (currentUserProfile) return;
+      document.getElementById('landing-view').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setRole(role) {
+      currentRole = role;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      const activeTab = document.getElementById(`tab-${role}`);
+      if (activeTab) activeTab.classList.add('active');
+      hideAlert();
+
+      const labelEmail = document.getElementById('label-email');
+      const groupKode = document.getElementById('group-kode');
+      const inputKode = document.getElementById('input-kode');
+
+      if (role === 'guru_bk') {
+        labelEmail.textContent = 'Email Guru BK';
+        groupKode.classList.remove('hidden');
+        inputKode.required = true;
+      } else {
+        labelEmail.textContent = role === 'admin' ? 'Email Admin' : 'Email Siswa';
+        groupKode.classList.add('hidden');
+        inputKode.required = false;
+        inputKode.value = '';
+      }
+      document.getElementById('group-kelas').classList.toggle('hidden', !(isRegisterMode && role === 'siswa'));
+    }
+
+    function toggleAuthMode() {
+      isRegisterMode = !isRegisterMode;
+      updateAuthModeUI();
+    }
+
+    function updateAuthModeUI() {
+      hideAlert();
+      document.getElementById('auth-title').textContent = isRegisterMode ? 'Daftar Akun Growimpian' : 'Masuk ke Growimpian';
+      document.getElementById('btn-submit').textContent = isRegisterMode ? 'Daftar Sekarang' : 'Masuk';
+      document.getElementById('switch-text').textContent = isRegisterMode ? 'Sudah punya akun?' : 'Belum punya akun?';
+      document.getElementById('switch-link').textContent = isRegisterMode ? 'Masuk di sini' : 'Daftar di sini';
+      document.getElementById('group-nama').classList.toggle('hidden', !isRegisterMode);
+      document.getElementById('input-nama').required = isRegisterMode;
+
+      const tabAdmin = document.getElementById('tab-admin');
+      if (isRegisterMode) {
+        tabAdmin.classList.add('hidden');
+        if (currentRole === 'admin') setRole('siswa');
+      } else {
+        tabAdmin.classList.remove('hidden');
+      }
+      document.getElementById('group-kelas').classList.toggle('hidden', !(isRegisterMode && currentRole === 'siswa'));
+    }
+
+    function showAlert(msg, type = 'error') {
+      const el = document.getElementById('auth-alert');
+      el.textContent = msg;
+      el.className = `alert alert-${type}`;
+      el.classList.remove('hidden');
+    }
+
+    function hideAlert() { document.getElementById('auth-alert').classList.add('hidden'); }
+
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const email = document.getElementById('input-email').value.trim();
+      const password = document.getElementById('input-password').value;
+      const kodeKhusus = document.getElementById('input-kode').value.trim();
+      const nama = document.getElementById('input-nama').value.trim();
+      const kelas = document.getElementById('input-kelas').value.trim();
+      const btn = document.getElementById('btn-submit');
+
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+
+      try {
+        if (currentRole === 'guru_bk') {
+          if (kodeKhusus.toUpperCase() !== 'GURUKU') {
+            const { data: kodeValid, error: rpcErr } = await db.rpc('cek_kode_bk', { input_kode: kodeKhusus });
+            if (rpcErr || !kodeValid) throw new Error('Kode khusus Guru BK tidak valid atau nonaktif.');
+          }
+        }
+
+        if (isRegisterMode) {
+          const { data: signUpData, error: signUpErr } = await db.auth.signUp({ email, password });
+          if (signUpErr) throw signUpErr;
+
+          if (signUpData.user) {
+            const { error: profErr } = await db.from('profiles').insert({
+              id: signUpData.user.id, nama, email,
+              kelas: currentRole === 'siswa' ? kelas : null, role: currentRole
+            });
+            if (profErr) throw profErr;
+          }
+          showAlert('Pendaftaran berhasil! Silakan masuk.', 'success');
+          toggleAuthMode();
+        } else {
+          const { data: authData, error: authErr } = await db.auth.signInWithPassword({ email, password });
+          if (authErr) throw new Error('Email atau password salah.');
+
+          const { data: profile, error: profErr } = await db.from('profiles').select('*').eq('id', authData.user.id).single();
+          if (profErr || profile.role !== currentRole) {
+            await db.auth.signOut();
+            throw new Error(`Akun ini tidak terdaftar sebagai ${currentRole.replace('_', ' ')}.`);
+          }
+          closeAuthModal();
+          loadDashboard(profile);
+        }
+      } catch (err) {
+        showAlert(err.message || 'Terjadi kesalahan.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = isRegisterMode ? 'Daftar Sekarang' : 'Masuk';
+      }
+    });
+
+    async function handleLogout() {
+      await db.auth.signOut();
+      currentUserProfile = null;
+      document.getElementById('nav-user').classList.add('hidden');
+      document.getElementById('nav-guest').classList.remove('hidden');
+      document.getElementById('dashboard-siswa').classList.add('hidden');
+      document.getElementById('dashboard-guru').classList.add('hidden');
+      document.getElementById('dashboard-admin').classList.add('hidden');
+      document.getElementById('landing-view').classList.remove('hidden');
+    }
+
+    function loadDashboard(profile) {
+      currentUserProfile = profile;
+      document.getElementById('landing-view').classList.add('hidden');
+      document.getElementById('nav-guest').classList.add('hidden');
+      document.getElementById('nav-user').classList.remove('hidden');
+      document.getElementById('nav-name').textContent = profile.nama;
+      document.getElementById('nav-role').textContent = profile.role.replace('_', ' ');
+
+      if (profile.role === 'siswa') {
+        document.getElementById('dashboard-siswa').classList.remove('hidden');
+        fetchJadwalSiswa();
+      } else if (profile.role === 'guru_bk') {
+        document.getElementById('dashboard-guru').classList.remove('hidden');
+        fetchJadwalGuru();
+      } else if (profile.role === 'admin') {
+        document.getElementById('dashboard-admin').classList.remove('hidden');
+        fetchAdminData();
+      }
+    }
+
+    // FITUR SISWA
+    document.getElementById('form-konseling').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { error } = await db.from('jadwal_konseling').insert({
+        siswa_id: currentUserProfile.id,
+        tanggal_konseling: document.getElementById('k-tanggal').value,
+        jam_konseling: document.getElementById('k-jam').value,
+        topik: document.getElementById('k-topik').value.trim()
+      });
+      if (error) return alert('Gagal mengirim pengajuan: ' + error.message);
+      e.target.reset();
+      fetchJadwalSiswa();
+    });
+
+    async function fetchJadwalSiswa() {
+      const { data } = await db.from('jadwal_konseling').select('*').eq('siswa_id', currentUserProfile.id).order('created_at', { ascending: false });
+      const tbody = document.getElementById('siswa-table-body');
+      tbody.innerHTML = (!data || !data.length)
+        ? '<tr><td colspan="4" style="text-align:center;color:var(--muted);">Belum ada pengajuan konseling.</td></tr>'
+        : data.map(r => `<tr><td>${r.tanggal_konseling}<br><small>${r.jam_konseling}</small></td><td>${r.topik}</td><td><span class="status status-${r.status}">${r.status}</span></td><td>${r.catatan_guru || '-'}</td></tr>`).join('');
+    }
+
+    // FITUR GURU BK
+    async function fetchJadwalGuru() {
+      const { data } = await db.from('jadwal_konseling').select('*, profiles!jadwal_konseling_siswa_id_fkey(nama, kelas)').order('created_at', { ascending: false });
+      const tbody = document.getElementById('guru-table-body');
+      tbody.innerHTML = (!data || !data.length)
+        ? '<tr><td colspan="5" style="text-align:center;color:var(--muted);">Belum ada pengajuan masuk.</td></tr>'
+        : data.map(r => `
+          <tr>
+            <td><strong>${r.profiles?.nama || 'Siswa'}</strong><br><small>${r.profiles?.kelas || '-'}</small></td>
+            <td>${r.tanggal_konseling}<br><small>${r.jam_konseling}</small></td>
+            <td>${r.topik}</td>
+            <td><span class="status status-${r.status}">${r.status}</span></td>
+            <td>
+              <input type="text" id="note-${r.id}" value="${r.catatan_guru || ''}" placeholder="Catatan..." style="margin-bottom:6px; padding:5px; font-size:0.8rem;" />
+              <div style="display:flex; gap:4px;">
+                <button class="btn-sm" style="background:#16a34a;color:#fff;" onclick="updateKonseling('${r.id}','disetujui')">Setujui</button>
+                <button class="btn-sm" style="background:#e2e8f0;" onclick="updateKonseling('${r.id}','selesai')">Selesai</button>
+                <button class="btn-sm" style="background:#dc2626;color:#fff;" onclick="updateKonseling('${r.id}','ditolak')">Tolak</button>
+              </div>
+            </td>
+          </tr>`).join('');
+    }
+
+    async function updateKonseling(id, status) {
+      const catatan = document.getElementById(`note-${id}`).value.trim();
+      const { error } = await db.from('jadwal_konseling').update({ status, catatan_guru: catatan, guru_bk_id: currentUserProfile.id }).eq('id', id);
+      if (error) return alert('Gagal update: ' + error.message);
+      fetchJadwalGuru();
+    }
+
+    // FITUR ADMIN
+    document.getElementById('form-kode').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const kode = document.getElementById('new-kode').value.trim();
+      const { error } = await db.from('kode_akses_bk').insert({ kode_khusus: kode });
+      if (error) return alert('Gagal tambah kode: ' + error.message);
+      e.target.reset();
+      fetchAdminData();
+    });
+
+    async function toggleKode(id, currentStatus) {
+      await db.from('kode_akses_bk').update({ is_active: !currentStatus }).eq('id', id);
+      fetchAdminData();
+    }
+
+    async function fetchAdminData() {
+      const { data: kodes } = await db.from('kode_akses_bk').select('*').order('id', { ascending: false });
+      document.getElementById('admin-kode-body').innerHTML = (kodes || []).map(k => `
+        <tr>
+          <td><strong>${k.kode_khusus}</strong></td>
+          <td><span class="status ${k.is_active ? 'status-selesai' : 'status-ditolak'}">${k.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
+          <td><button class="btn-sm" style="background:#e2e8f0;" onclick="toggleKode(${k.id}, ${k.is_active})">${k.is_active ? 'Nonaktifkan' : 'Aktifkan'}</button></td>
+        </tr>`).join('');
+
+      const { data: users } = await db.from('profiles').select('nama, email, role').order('created_at', { ascending: false });
+      document.getElementById('admin-user-body').innerHTML = (users || []).map(u => `
+        <tr><td>${u.nama}</td><td>${u.email}</td><td><span class="badge-role">${u.role.replace('_', ' ')}</span></td></tr>`).join('');
+    }
+
+    // Auto-login saat refresh
+    (async () => {
+      const { data: { session } } = await db.auth.getSession();
+      if (session) {
+        const { data: profile } = await db.from('profiles').select('*').eq('id', session.user.id).single();
+        if (profile) loadDashboard(profile);
+      }
+    })();
+  </script>
+</body>
+</html>
