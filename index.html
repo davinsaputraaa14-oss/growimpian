@@ -103,19 +103,16 @@
         // =====================================================================
         // 1. KONFIGURASI FIREBASE & MODE FALLBACK
         // =====================================================================
-        // Catatan Deploy Vercel: Jika di-deploy mandiri di Vercel, ganti nilai
-        // `manualFirebaseConfig` di bawah dengan konfigurasi Firebase Project Anda.
-        const manualFirebaseConfig = null;
-        /* Contoh konfigurasi untuk Vercel:
+        // Konfigurasi Firebase Project "growimpian" untuk deployment Vercel
         const manualFirebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "grow-impian.firebaseapp.com",
-            projectId: "grow-impian",
-            storageBucket: "grow-impian.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
+            apiKey: "AIzaSyC9TILLechVNq7BRM0b0TprKnBeKlkhq5k",
+            authDomain: "growimpian.firebaseapp.com",
+            projectId: "growimpian",
+            storageBucket: "growimpian.firebasestorage.app",
+            messagingSenderId: "139711807881",
+            appId: "1:139711807881:web:4889f0cbd23a2108a2e158",
+            measurementId: "G-VYWZYSHBSJ"
         };
-        */
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'grow-impian-app';
         let firebaseConfig = manualFirebaseConfig;
